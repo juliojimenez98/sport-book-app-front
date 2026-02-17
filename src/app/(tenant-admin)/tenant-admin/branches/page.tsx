@@ -222,8 +222,13 @@ export default function TenantBranchesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {branches.map((branch) => (
-            <Card key={branch.id} className={`overflow-hidden ${!branch.isActive ? "opacity-60 border-destructive/40" : ""}`}>
-              <div className={`h-32 flex items-center justify-center ${branch.isActive ? "bg-linear-to-br from-primary/20 to-accent/20" : "bg-muted"}`}>
+            <Card
+              key={branch.id}
+              className={`overflow-hidden ${!branch.isActive ? "opacity-60 border-destructive/40" : ""}`}
+            >
+              <div
+                className={`h-32 flex items-center justify-center ${branch.isActive ? "bg-linear-to-br from-primary/20 to-accent/20" : "bg-muted"}`}
+              >
                 <Building2 className="h-12 w-12 text-primary/50" />
               </div>
               <CardContent className="p-4">
@@ -315,7 +320,11 @@ export default function TenantBranchesPage() {
                     variant={branch.isActive ? "outline" : "default"}
                     size="sm"
                     onClick={() => openToggleDialog(branch)}
-                    title={branch.isActive ? "Bloquear sucursal" : "Desbloquear sucursal"}
+                    title={
+                      branch.isActive
+                        ? "Bloquear sucursal"
+                        : "Desbloquear sucursal"
+                    }
                   >
                     {branch.isActive ? (
                       <ShieldOff className="h-4 w-4" />
@@ -473,7 +482,9 @@ export default function TenantBranchesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {toggleBranch?.isActive ? "Bloquear sucursal" : "Desbloquear sucursal"}
+              {toggleBranch?.isActive
+                ? "Bloquear sucursal"
+                : "Desbloquear sucursal"}
             </DialogTitle>
             <DialogDescription>
               {toggleBranch?.isActive
