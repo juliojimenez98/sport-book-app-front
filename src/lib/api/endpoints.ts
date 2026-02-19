@@ -22,6 +22,7 @@ import {
   BranchHours,
   BlockedSlot,
   BlockedSlotForm,
+  LocationsData,
 } from "@/lib/types";
 
 // ============================================
@@ -205,6 +206,9 @@ export const bookingsApi = {
     api.post<Booking>(`/bookings/${id}/cancel`, { reason }),
 
   confirm: (id: number) => api.put<Booking>(`/bookings/${id}/confirm`),
+
+  reject: (id: number, reason: string) =>
+    api.put<Booking>(`/bookings/${id}/reject`, { reason }),
 };
 
 // ============================================
@@ -274,9 +278,18 @@ export const publicApi = {
       { skipAuth: true },
     ),
 
-  getBranches: () => api.get<Branch[]>("/public/branches", { skipAuth: true }),
+  getBranches: (filters?: { comunaId?: string; regionId?: string; sportId?: number }) => {
+    const params = new URLSearchParams();
+    if (filters?.comunaId) params.set("comunaId", filters.comunaId);
+    if (filters?.regionId) params.set("regionId", filters.regionId);
+    if (filters?.sportId) params.set("sportId", filters.sportId.toString());
+    const query = params.toString();
+    return api.get<Branch[]>(`/public/branches${query ? `?${query}` : ""}`, { skipAuth: true });
+  },
 
   getSports: () => api.get<Sport[]>("/public/sports", { skipAuth: true }),
+
+  getLocations: () => api.get<LocationsData>("/public/locations", { skipAuth: true }),
 
   getBranchResources: (branchId: number) =>
     api.get<Resource[]>(`/public/branches/${branchId}/resources`, {

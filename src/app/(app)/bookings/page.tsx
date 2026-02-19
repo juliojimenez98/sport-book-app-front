@@ -33,6 +33,7 @@ const statusLabels: Record<BookingStatus, string> = {
   [BookingStatus.PENDING]: "Pendiente",
   [BookingStatus.CONFIRMED]: "Confirmada",
   [BookingStatus.CANCELLED]: "Cancelada",
+  [BookingStatus.REJECTED]: "Rechazada",
   [BookingStatus.COMPLETED]: "Completada",
   [BookingStatus.NO_SHOW]: "No asistió",
 };
@@ -90,6 +91,7 @@ export default function BookingsPage() {
     (b) =>
       b.status === BookingStatus.COMPLETED ||
       b.status === BookingStatus.CANCELLED ||
+      b.status === BookingStatus.REJECTED ||
       b.status === BookingStatus.NO_SHOW,
   );
 
@@ -167,7 +169,7 @@ export default function BookingsPage() {
                       </p>
                     </div>
                     <div className="flex-1 p-6">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div>
                           <h3 className="font-semibold text-lg">
                             {booking.resource?.name}
@@ -187,7 +189,7 @@ export default function BookingsPage() {
                             {statusLabels[booking.status]}
                           </Badge>
                         </div>
-                        <div className="text-right">
+                        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-0 w-full sm:w-auto mt-2 sm:mt-0">
                           <p className="font-semibold text-lg">
                             {formatCurrency(
                               booking.totalPrice,
@@ -197,7 +199,7 @@ export default function BookingsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-destructive mt-2"
+                            className="text-destructive sm:mt-2"
                             onClick={() =>
                               setCancelDialog({ open: true, booking })
                             }
@@ -227,34 +229,52 @@ export default function BookingsPage() {
                 className="opacity-75 hover:opacity-100 transition-opacity"
               >
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium">
-                          {formatDate(booking.startAt, {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatTime(booking.startAt)}
-                        </p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="text-center min-w-[3rem]">
+                          <p className="text-sm font-medium">
+                            {formatDate(booking.startAt, {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatTime(booking.startAt)}
+                          </p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{booking.resource?.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {booking.resource?.branch?.name}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{booking.resource?.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {booking.resource?.branch?.name}
+                      <div className="flex items-center justify-between w-full sm:w-auto gap-4 pl-[4.5rem] sm:pl-0">
+                        <Badge
+                          className="shrink-0"
+                          variant={
+                            booking.status === BookingStatus.REJECTED
+                              ? "destructive"
+                              : booking.status === BookingStatus.COMPLETED
+                                ? "secondary"
+                                : "outline"
+                          }
+                        >
+                          {statusLabels[booking.status]}
+                        </Badge>
+                        <p className="font-medium whitespace-nowrap">
+                          {formatCurrency(booking.totalPrice, booking.currency)}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Badge className={getStatusColor(booking.status)}>
-                        {statusLabels[booking.status]}
-                      </Badge>
-                      <p className="font-medium">
-                        {formatCurrency(booking.totalPrice, booking.currency)}
-                      </p>
-                    </div>
+                    {booking.status === BookingStatus.REJECTED &&
+                      booking.rejectionReason && (
+                        <div className="bg-destructive/10 p-3 rounded-lg text-sm text-destructive">
+                          <p className="font-medium">Motivo del rechazo:</p>
+                          <p>{booking.rejectionReason}</p>
+                        </div>
+                      )}
                   </div>
                 </CardContent>
               </Card>

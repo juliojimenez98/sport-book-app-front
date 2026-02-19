@@ -247,7 +247,7 @@ export default function TenantUsersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
         <div>
           <h1 className="text-3xl font-bold">Usuarios</h1>
           <p className="text-muted-foreground">
@@ -259,7 +259,7 @@ export default function TenantUsersPage() {
       {/* Search */}
       <div className="space-y-2">
         <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar usuarios por nombre o email..."
@@ -294,32 +294,32 @@ export default function TenantUsersPage() {
           {users.map((user: UserProfile) => (
             <Card key={user.userId}>
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                       <span className="text-lg font-semibold text-primary">
                         {user.firstName?.[0]}
                         {user.lastName?.[0]}
                       </span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-lg">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-lg truncate">
                         {user.firstName} {user.lastName}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground truncate">
                         {user.email}
                       </p>
                       {user.phone && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground truncate">
                           {user.phone}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
                     {/* Roles */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                       {((user.roles || user.userRoles) ?? []).length > 0 ? (
                         ((user.roles || user.userRoles) ?? []).map(
                           (userRole: any, idx: number) => {
@@ -377,6 +377,7 @@ export default function TenantUsersPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="w-full sm:w-auto"
                       onClick={() => openRoleDialog(user)}
                     >
                       <UserPlus className="h-4 w-4 mr-2" />

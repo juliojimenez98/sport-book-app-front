@@ -41,14 +41,15 @@ import {
   CalendarDays,
   ClipboardCheck,
 } from "lucide-react";
-import { branchesApi, tenantsApi } from "@/lib/api";
+import { Branch, BranchForm, RoleName, RoleScope, Region, Comuna } from "@/lib/types";
+import { publicApi, branchesApi, tenantsApi } from "@/lib/api";
 import { useAuth } from "@/contexts";
-import { Branch, BranchForm, RoleName, RoleScope } from "@/lib/types";
 
 export default function TenantBranchesPage() {
   const { user: currentUser } = useAuth();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [regions, setRegions] = useState<Region[]>([]);
 
   // Create dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -96,7 +97,20 @@ export default function TenantBranchesPage() {
 
   useEffect(() => {
     loadBranches();
+    loadLocations();
   }, []);
+
+  const loadLocations = async () => {
+    try {
+      const data = await publicApi.getLocations();
+      const list = Array.isArray(data)
+        ? data
+        : (data as unknown as { regions: Region[] }).regions || [];
+      setRegions(list);
+    } catch (error) {
+      console.error("Error loading locations:", error);
+    }
+  };
 
   const loadBranches = async () => {
     try {
@@ -120,6 +134,8 @@ export default function TenantBranchesPage() {
       address: branch.address || "",
       phone: branch.phone || "",
       email: branch.email || "",
+      regionId: branch.regionId || "",
+      comunaId: branch.comunaId || "",
       hasParking: branch.hasParking || false,
       hasBathrooms: branch.hasBathrooms || false,
       hasShowers: branch.hasShowers || false,
@@ -206,6 +222,8 @@ export default function TenantBranchesPage() {
       address: "",
       phone: "",
       email: "",
+      regionId: "",
+      comunaId: "",
       hasParking: false,
       hasBathrooms: false,
       hasShowers: false,
@@ -223,8 +241,13 @@ export default function TenantBranchesPage() {
     if (!tenantId || !createFormData.name) return;
 
     setIsCreating(true);
+    // Remove empty strings for optional fields
+    const dataToSubmit = { ...createFormData };
+    if (!dataToSubmit.regionId) delete dataToSubmit.regionId;
+    if (!dataToSubmit.comunaId) delete dataToSubmit.comunaId;
+
     try {
-      await toast.promise(tenantsApi.createBranch(tenantId, createFormData), {
+      await toast.promise(tenantsApi.createBranch(tenantId, dataToSubmit), {
         loading: "Creando sucursal...",
         success: "Sucursal creada correctamente",
         error: "Error al crear sucursal",
@@ -498,8 +521,56 @@ export default function TenantBranchesPage() {
                 />
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="region">Región</Label>
+                  <select
+                    id="region"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.regionId || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        regionId: e.target.value,
+                        comunaId: "", // Reset comuna when region changes
+                      })
+                    }
+                  >
+                    <option value="">Selecciona una región</option>
+                    {regions.map((region) => (
+                      <option key={region.id} value={region.id}>
+                        {region.romanNumber} - {region.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="comuna">Comuna</Label>
+                  <select
+                    id="comuna"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.comunaId || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, comunaId: e.target.value })
+                    }
+                    disabled={!formData.regionId}
+                  >
+                    <option value="">Selecciona una comuna</option>
+                    {formData.regionId &&
+                      regions
+                        .find((r) => r.id === formData.regionId)
+                        ?.communes.map((comuna) => (
+                          <option key={comuna.id} value={comuna.id}>
+                            {comuna.name}
+                          </option>
+                        ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="address">Dirección</Label>
+                <Label htmlFor="address">Dirección (calle y número)</Label>
                 <Input
                   id="address"
                   value={formData.address}
@@ -711,8 +782,59 @@ export default function TenantBranchesPage() {
                 />
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="create-region">Región</Label>
+                  <select
+                    id="create-region"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={createFormData.regionId || ""}
+                    onChange={(e) =>
+                      setCreateFormData({
+                        ...createFormData,
+                        regionId: e.target.value,
+                        comunaId: "", // Reset comuna when region changes
+                      })
+                    }
+                  >
+                    <option value="">Selecciona una región</option>
+                    {regions.map((region) => (
+                      <option key={region.id} value={region.id}>
+                        {region.romanNumber} - {region.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="create-comuna">Comuna</Label>
+                  <select
+                    id="create-comuna"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={createFormData.comunaId || ""}
+                    onChange={(e) =>
+                      setCreateFormData({
+                        ...createFormData,
+                        comunaId: e.target.value,
+                      })
+                    }
+                    disabled={!createFormData.regionId}
+                  >
+                    <option value="">Selecciona una comuna</option>
+                    {createFormData.regionId &&
+                      regions
+                        .find((r) => r.id === createFormData.regionId)
+                        ?.communes.map((comuna) => (
+                          <option key={comuna.id} value={comuna.id}>
+                            {comuna.name}
+                          </option>
+                        ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="create-address">Dirección</Label>
+                <Label htmlFor="create-address">Dirección (calle y número)</Label>
                 <Input
                   id="create-address"
                   value={createFormData.address}

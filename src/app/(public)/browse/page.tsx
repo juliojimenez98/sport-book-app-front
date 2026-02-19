@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "@/lib/toast";
 import {
@@ -26,9 +26,11 @@ import {
   Coffee,
   Dumbbell,
   Bath,
+  X,
+  Filter,
 } from "lucide-react";
 import { publicApi } from "@/lib/api";
-import { Tenant, Branch } from "@/lib/types";
+import { Branch, Sport, Region } from "@/lib/types";
 
 // Amenities configuration
 const AMENITIES = [
@@ -41,59 +43,91 @@ const AMENITIES = [
   { key: "hasEquipmentRental", label: "Renta de equipo", icon: Dumbbell },
 ] as const;
 
-interface TenantWithBranches extends Tenant {
-  branches?: Branch[];
-}
-
 export default function BrowsePage() {
-  const [tenants, setTenants] = useState<TenantWithBranches[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
 
+  // Filters
+  const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedComuna, setSelectedComuna] = useState("");
+  const [selectedSport, setSelectedSport] = useState("");
+
   useEffect(() => {
-    loadTenants();
+    loadFiltersData();
   }, []);
 
-  const loadTenants = async () => {
+  const loadFiltersData = async () => {
+    try {
+      const [locData, sportsData] = await Promise.all([
+        publicApi.getLocations(),
+        publicApi.getSports(),
+      ]);
+      const locRegions = Array.isArray(locData)
+        ? locData
+        : (locData as unknown as { regions: Region[] }).regions || [];
+      setRegions(locRegions);
+      const sList = Array.isArray(sportsData)
+        ? sportsData
+        : (sportsData as unknown as { data: Sport[] }).data || [];
+      setSports(sList);
+    } catch {
+      // Filters will be empty
+    }
+  };
+
+  const loadBranches = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await publicApi.getTenants();
+      const filters: { comunaId?: string; regionId?: string; sportId?: number } = {};
+      if (selectedComuna) filters.comunaId = selectedComuna;
+      else if (selectedRegion) filters.regionId = selectedRegion;
+      if (selectedSport) filters.sportId = parseInt(selectedSport);
+
+      const data = await publicApi.getBranches(
+        Object.keys(filters).length > 0 ? filters : undefined,
+      );
       const list = Array.isArray(data)
         ? data
-        : (data as unknown as { data: TenantWithBranches[] }).data || [];
-      setTenants(list);
-    } catch (error) {
-      toast.error("Error al cargar los centros deportivos");
+        : (data as unknown as { data: Branch[] }).data || [];
+      setBranches(list);
+    } catch {
+      toast.error("Error al cargar las sucursales");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedComuna, selectedRegion, selectedSport]);
+
+  useEffect(() => {
+    loadBranches();
+  }, [loadBranches]);
 
   const getBranchAmenities = (branch: Branch) => {
     return AMENITIES.filter((amenity) => branch[amenity.key as keyof Branch]);
   };
 
-  // Filter tenants by search
-  const filteredTenants = tenants.filter((tenant) => {
+  // Communes for selected region
+  const communesForRegion = regions.find((r) => r.id === selectedRegion)?.communes || [];
+
+  // Filter by text search (client-side)
+  const filteredBranches = branches.filter((branch) => {
     const q = search.toLowerCase();
     if (!q) return true;
-    if (tenant.name.toLowerCase().includes(q)) return true;
-    if (
-      tenant.branches?.some(
-        (b) =>
-          b.name.toLowerCase().includes(q) ||
-          b.address?.toLowerCase().includes(q),
-      )
-    )
-      return true;
+    if (branch.name.toLowerCase().includes(q)) return true;
+    if (branch.address?.toLowerCase().includes(q)) return true;
+    if (branch.tenant?.name.toLowerCase().includes(q)) return true;
     return false;
   });
 
-  // Count total branches
-  const totalBranches = tenants.reduce(
-    (acc, t) => acc + (t.branches?.length || 0),
-    0,
-  );
+  const hasActiveFilters = selectedRegion || selectedComuna || selectedSport;
+
+  const clearFilters = () => {
+    setSelectedRegion("");
+    setSelectedComuna("");
+    setSelectedSport("");
+  };
 
   return (
     <>
@@ -119,10 +153,77 @@ export default function BrowsePage() {
             />
           </div>
 
+          {/* Filters */}
+          <div className="max-w-3xl mx-auto mt-6">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground font-medium">
+                Filtrar por
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {/* Region filter */}
+              <select
+                value={selectedRegion}
+                onChange={(e) => {
+                  setSelectedRegion(e.target.value);
+                  setSelectedComuna("");
+                }}
+                className="h-10 px-3 rounded-md border border-input bg-background text-sm min-w-[180px]"
+              >
+                <option value="">Todas las regiones</option>
+                {regions.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {region.romanNumber} - {region.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Comuna filter (dependent on region) */}
+              <select
+                value={selectedComuna}
+                onChange={(e) => setSelectedComuna(e.target.value)}
+                disabled={!selectedRegion}
+                className="h-10 px-3 rounded-md border border-input bg-background text-sm min-w-[180px] disabled:opacity-50"
+              >
+                <option value="">Todas las comunas</option>
+                {communesForRegion.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Sport filter */}
+              <select
+                value={selectedSport}
+                onChange={(e) => setSelectedSport(e.target.value)}
+                className="h-10 px-3 rounded-md border border-input bg-background text-sm min-w-[160px]"
+              >
+                <option value="">Todos los deportes</option>
+                {sports.map((sport) => (
+                  <option key={sport.sportId} value={sport.sportId}>
+                    {sport.name}
+                  </option>
+                ))}
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 h-10 px-3 rounded-md border border-destructive/30 text-destructive text-sm hover:bg-destructive/10 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                  Limpiar
+                </button>
+              )}
+            </div>
+          </div>
+
           <p className="text-sm text-muted-foreground mt-4">
-            {tenants.length} centro{tenants.length !== 1 ? "s" : ""} deportivo
-            {tenants.length !== 1 ? "s" : ""} · {totalBranches} sucursal
-            {totalBranches !== 1 ? "es" : ""}
+            {filteredBranches.length} sucursal
+            {filteredBranches.length !== 1 ? "es" : ""} encontrada
+            {filteredBranches.length !== 1 ? "s" : ""}
           </p>
         </div>
       </section>
@@ -142,118 +243,94 @@ export default function BrowsePage() {
                 </Card>
               ))}
             </div>
-          ) : filteredTenants.length === 0 ? (
+          ) : filteredBranches.length === 0 ? (
             <div className="text-center py-16">
               <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h2 className="text-xl font-semibold mb-2">
-                {search
+                {search || hasActiveFilters
                   ? "No se encontraron resultados"
-                  : "No hay centros deportivos disponibles"}
+                  : "No hay sucursales disponibles"}
               </h2>
               <p className="text-muted-foreground">
-                {search
-                  ? "Intenta con otra búsqueda"
+                {search || hasActiveFilters
+                  ? "Intenta con otra búsqueda o cambia los filtros"
                   : "Vuelve pronto para ver nuevos centros deportivos."}
               </p>
             </div>
           ) : (
-            <div className="space-y-10">
-              {filteredTenants.map((tenant) => (
-                <div key={tenant.tenantId}>
-                  {/* Tenant Header */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredBranches.map((branch) => {
+                const amenities = getBranchAmenities(branch);
+                return (
                   <Link
-                    href={`/${tenant.slug}`}
-                    className="group inline-flex items-center gap-3 mb-4"
+                    key={branch.branchId}
+                    href={`/${branch.tenant?.slug}/${branch.slug}`}
+                    className="block group/card"
                   >
-                    {tenant.logoUrl ? (
-                      <img
-                        src={tenant.logoUrl}
-                        alt={tenant.name}
-                        className="h-10 w-10 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="h-5 w-5 text-primary" />
-                      </div>
-                    )}
-                    <div>
-                      <h2 className="text-xl font-bold group-hover:text-primary transition-colors">
-                        {tenant.name}
-                      </h2>
-                      <p className="text-sm text-muted-foreground">
-                        {tenant.branches?.length || 0} sucursal
-                        {(tenant.branches?.length || 0) !== 1 ? "es" : ""}
-                      </p>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg group-hover/card:text-primary transition-colors">
+                              {branch.name}
+                            </CardTitle>
+                            {branch.tenant && (
+                              <p className="text-sm text-muted-foreground mt-0.5">
+                                {branch.tenant.name}
+                              </p>
+                            )}
+                            {branch.address && (
+                              <CardDescription className="flex items-start gap-1 mt-1">
+                                <MapPin className="h-3 w-3 mt-1 shrink-0" />
+                                {branch.address}
+                              </CardDescription>
+                            )}
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover/card:text-primary group-hover/card:translate-x-1 transition-all shrink-0" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {branch.phone && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 mb-3">
+                            <Phone className="h-3 w-3" />
+                            {branch.phone}
+                          </p>
+                        )}
+
+                        {/* Sports badges */}
+                        {branch.sports && branch.sports.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {branch.sports.map((sport) => (
+                              <Badge key={sport.sportId} variant="default" className="text-xs">
+                                {sport.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Amenities */}
+                        {amenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {amenities.map((amenity) => {
+                              const Icon = amenity.icon;
+                              return (
+                                <Badge
+                                  key={amenity.key}
+                                  variant="secondary"
+                                  className="gap-1 text-xs"
+                                >
+                                  <Icon className="h-3 w-3" />
+                                  {amenity.label}
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </Link>
-
-                  {/* Branches */}
-                  {tenant.branches && tenant.branches.length > 0 ? (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {tenant.branches.map((branch) => {
-                        const amenities = getBranchAmenities(branch);
-                        return (
-                          <Link
-                            key={branch.branchId}
-                            href={`/${tenant.slug}/${branch.slug}`}
-                            className="block group/card"
-                          >
-                            <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50">
-                              <CardHeader className="pb-2">
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <CardTitle className="text-lg group-hover/card:text-primary transition-colors">
-                                      {branch.name}
-                                    </CardTitle>
-                                    {branch.address && (
-                                      <CardDescription className="flex items-start gap-1 mt-1">
-                                        <MapPin className="h-3 w-3 mt-1 shrink-0" />
-                                        {branch.address}
-                                      </CardDescription>
-                                    )}
-                                  </div>
-                                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover/card:text-primary group-hover/card:translate-x-1 transition-all shrink-0" />
-                                </div>
-                              </CardHeader>
-                              <CardContent>
-                                {branch.phone && (
-                                  <p className="text-sm text-muted-foreground flex items-center gap-1 mb-3">
-                                    <Phone className="h-3 w-3" />
-                                    {branch.phone}
-                                  </p>
-                                )}
-
-                                {amenities.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {amenities.map((amenity) => {
-                                      const Icon = amenity.icon;
-                                      return (
-                                        <Badge
-                                          key={amenity.key}
-                                          variant="secondary"
-                                          className="gap-1 text-xs"
-                                        >
-                                          <Icon className="h-3 w-3" />
-                                          {amenity.label}
-                                        </Badge>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Sin sucursales disponibles
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

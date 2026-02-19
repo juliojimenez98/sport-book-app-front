@@ -73,6 +73,7 @@ export default function ResourceDetailPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [pendingBookingSlots, setPendingBookingSlots] = useState<string[]>([]);
   const [blockedSlotsList, setBlockedSlotsList] = useState<
     CalendarBlockedSlot[]
   >([]);
@@ -160,16 +161,31 @@ export default function ResourceDetailPage() {
         dateStr,
       );
 
-      // Map bookings to booked start times
+      // Map bookings to booked start times, separating confirmed and user's pending
       const bookings = calendarData.bookings || [];
-      const booked = bookings.map((b: CalendarBooking) => {
+      const confirmed: string[] = [];
+      const myPending: string[] = [];
+
+      bookings.forEach((b: CalendarBooking) => {
         const startDate = new Date(b.startAt);
-        return startDate.toLocaleTimeString("en-GB", {
+        const timeStr = startDate.toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
         });
+
+        if (b.status === "confirmed") {
+          confirmed.push(timeStr);
+        } else if (
+          b.status === "pending" &&
+          user &&
+          b.userId === user.userId
+        ) {
+          myPending.push(timeStr);
+        }
       });
-      setBookedSlots(booked);
+
+      setBookedSlots(confirmed);
+      setPendingBookingSlots(myPending);
 
       // Store blocked slots
       setBlockedSlotsList(calendarData.blockedSlots || []);
@@ -256,7 +272,10 @@ export default function ResourceDetailPage() {
     }
   };
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   const isSlotBooked = (time: string) => bookedSlots.includes(time);
+  const isSlotPending = (time: string) => pendingBookingSlots.includes(time);
+  /* eslint-enable react-hooks/exhaustive-deps */
   const isSlotPast = (time: string) => {
     const today = new Date();
     const slotDate = new Date(selectedDate);
@@ -473,7 +492,7 @@ export default function ResourceDetailPage() {
 
         {/* Booking Panel */}
         <div>
-          <Card className="sticky top-4">
+          <Card className="sticky top-24">
             <CardHeader>
               <CardTitle>Reservar</CardTitle>
               <CardDescription>Selecciona fecha y horario</CardDescription>
@@ -581,9 +600,10 @@ export default function ResourceDetailPage() {
                   <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
                     {timeSlots.map((slot) => {
                       const booked = isSlotBooked(slot.start);
+                      const pending = isSlotPending(slot.start);
                       const blocked = isSlotBlocked(slot.start);
                       const past = isSlotPast(slot.start);
-                      const disabled = booked || blocked || past;
+                      const disabled = booked || blocked || past || pending;
                       const selected = selectedSlot === slot.start;
 
                       return (
@@ -592,11 +612,14 @@ export default function ResourceDetailPage() {
                           variant={selected ? "default" : "outline"}
                           size="sm"
                           className={cn(
-                            "text-xs",
+                            "text-xs relative overflow-hidden",
                             disabled &&
-                              "opacity-50 cursor-not-allowed line-through",
+                              "opacity-50 cursor-not-allowed",
+                            disabled && !pending && "line-through",
                             booked &&
                               "bg-red-100 dark:bg-red-900/20 border-red-300",
+                            pending &&
+                              "bg-amber-100 dark:bg-amber-900/20 border-amber-300 opacity-100",
                             blocked &&
                               "bg-zinc-100 dark:bg-zinc-900/20 border-zinc-300",
                           )}
@@ -604,6 +627,11 @@ export default function ResourceDetailPage() {
                           onClick={() => setSelectedSlot(slot.start)}
                         >
                           {slot.start}
+                          {pending && (
+                            <span className="absolute inset-0 flex items-center justify-center bg-amber-100/90 dark:bg-amber-900/90 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                              Pendiente
+                            </span>
+                          )}
                         </Button>
                       );
                     })}

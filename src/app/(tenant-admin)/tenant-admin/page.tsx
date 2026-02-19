@@ -33,12 +33,40 @@ import {
 } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/utils";
 import { toast } from "@/lib/toast";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+import { bookingsApi } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label, Textarea } from "@/components/ui";
 
 export default function TenantAdminDashboardPage() {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] =
     useState<TenantDashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Action states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rejectDialog, setRejectDialog] = useState<{
+    open: boolean;
+    booking: Booking | null;
+  }>({ open: false, booking: null });
+  const [rejectionReason, setRejectionReason] = useState("");
 
   // Get tenant ID from current user's role
   const tenantRole = user?.roles?.find((r) => {
@@ -67,6 +95,48 @@ export default function TenantAdminDashboardPage() {
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
+
+  const handleConfirmBooking = async (booking: Booking) => {
+    setIsSubmitting(true);
+    try {
+      await toast.promise(
+        bookingsApi.confirm(booking.bookingId),
+        {
+          loading: "Confirmando reserva...",
+          success: "Reserva confirmada",
+          error: "Error al confirmar reserva"
+        }
+      );
+      loadDashboard();
+    } catch {
+      // handled by toast.promise
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectBooking = async () => {
+    if (!rejectDialog.booking || !rejectionReason) return;
+    
+    setIsSubmitting(true);
+    try {
+      await toast.promise(
+        bookingsApi.reject(rejectDialog.booking.bookingId, rejectionReason),
+        {
+          loading: "Rechazando reserva...",
+          success: "Reserva rechazada",
+          error: "Error al rechazar reserva"
+        }
+      );
+      setRejectDialog({ open: false, booking: null });
+      setRejectionReason("");
+      loadDashboard();
+    } catch {
+      // handled by toast.promise
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const formatRoleName = (roleName: string) => {
     const names: Record<string, string> = {
@@ -165,6 +235,8 @@ export default function TenantAdminDashboardPage() {
   const recentBookings = dashboardData?.recentBookings || [];
   const branchSummary = dashboardData?.branchSummary || [];
   const tenantUsers = dashboardData?.tenantUsers || [];
+  const pendingBookings = dashboardData?.pendingBookingsList || [];
+  const bookingsChart = dashboardData?.bookingsChart || [];
 
   return (
     <div className="space-y-6">
@@ -258,6 +330,108 @@ export default function TenantAdminDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Charts & Pending Actions Row */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Revenue Chart */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Ingresos e Reservas (Últimos 30 días)</CardTitle>
+            <CardDescription>
+              Tendencia de reservas y crecimiento
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            {bookingsChart.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={bookingsChart}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => formatDate(value + 'T00:00:00', { month: 'short', day: 'numeric' })}
+                    fontSize={12}
+                  />
+                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" fontSize={12} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" fontSize={12} />
+                  <Tooltip 
+                    labelFormatter={(value) => formatDate(value + 'T00:00:00', { month: 'long', day: 'numeric' })}
+                    formatter={(value: number | undefined, name: string | undefined) => [
+                      name === 'revenue' ? `$${value ?? 0}` : value ?? 0,
+                      name === 'revenue' ? 'Ingresos' : 'Reservas'
+                    ]}
+                  />
+                  <Bar yAxisId="left" dataKey="bookings" fill="#8884d8" name="Reservas" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="revenue" fill="#82ca9d" name="revenue" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No hay datos suficientes
+                </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pending Bookings List */}
+        <Card className="col-span-1 border-amber-200 dark:border-amber-900 bg-amber-50/10 dark:bg-amber-950/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-500" />
+              Reservas Pendientes ({pendingBookings.length})
+            </CardTitle>
+            <CardDescription>
+              Requieren aprobación
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {pendingBookings.length === 0 ? (
+                <div className="flex items-center justify-center h-40 text-muted-foreground">
+                    <CheckCircle className="h-8 w-8 mr-2 text-green-500 opacity-50" />
+                    <p>Todo al día</p>
+                </div>
+            ) : (
+                <div className="space-y-4 max-h-[260px] overflow-y-auto pr-2">
+                    {pendingBookings.map((booking) => (
+                        <div key={booking.bookingId} className="flex flex-col gap-3 p-3 bg-background rounded-lg border shadow-sm">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-medium text-sm">
+                                        {booking.resource?.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatDate(booking.startAt)} · {formatTime(booking.startAt)}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        👤 {booking.user?.firstName} {booking.user?.lastName}
+                                    </p>
+                                </div>
+                                <Badge variant="warning">Pendiente</Badge>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                                <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-7 text-xs border-red-200 hover:bg-red-50 text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    onClick={() => setRejectDialog({ open: true, booking })}
+                                >
+                                    Rechazar
+                                </Button>
+                                <Button 
+                                    size="sm" 
+                                    className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
+                                    onClick={() => handleConfirmBooking(booking)}
+                                    disabled={isSubmitting}
+                                >
+                                    Aprobar
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Content - 2 columns */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -433,6 +607,48 @@ export default function TenantAdminDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Reject Dialog */}
+      <Dialog
+        open={rejectDialog.open}
+        onOpenChange={(open) =>
+          !open && setRejectDialog({ open: false, booking: null })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rechazar Reserva</DialogTitle>
+            <DialogDescription>
+              Indica el motivo del rechazo. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Motivo</Label>
+              <Textarea
+                placeholder="Ej: Mantenimiento imprevisto, horario no disponible..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialog({ open: false, booking: null })}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectBooking}
+              disabled={!rejectionReason || isSubmitting}
+            >
+              Rechazar Reserva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

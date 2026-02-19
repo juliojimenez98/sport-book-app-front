@@ -9,6 +9,7 @@ export enum BookingStatus {
   CANCELLED = "cancelled",
   COMPLETED = "completed",
   NO_SHOW = "no_show",
+  REJECTED = "rejected",
 }
 
 export enum BookingSource {
@@ -56,6 +57,9 @@ export interface Branch {
   phone?: string;
   email?: string;
   timezone: string;
+  // Location
+  regionId?: string;
+  comunaId?: string;
   // Amenities
   hasParking: boolean;
   hasBathrooms: boolean;
@@ -72,6 +76,26 @@ export interface Branch {
   createdAt: string;
   updatedAt: string;
   tenant?: Tenant;
+  sports?: Sport[];
+}
+
+// Chile locations
+export interface Comuna {
+  id: string;
+  name: string;
+}
+
+export interface Region {
+  id: string;
+  name: string;
+  romanNumber: string;
+  number: string;
+  communes: Comuna[];
+}
+
+export interface LocationsData {
+  name: string;
+  regions: Region[];
 }
 
 export interface Sport {
@@ -141,6 +165,7 @@ export interface Booking {
   totalPrice: number;
   currency: string;
   notes?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
   resource?: Resource;
@@ -224,6 +249,7 @@ export interface CalendarBooking {
   startAt: string;
   endAt: string;
   status: string;
+  userId?: number;
 }
 
 export interface CalendarBlockedSlot {
@@ -316,6 +342,9 @@ export interface BranchForm {
   email?: string;
   timezone?: string;
   isActive?: boolean;
+  // Location
+  regionId?: string;
+  comunaId?: string;
   // Amenities
   hasParking?: boolean;
   hasBathrooms?: boolean;
@@ -357,6 +386,8 @@ export interface TenantDashboardStats {
     resourceCount: number;
   }[];
   tenantUsers: TenantUser[];
+  bookingsChart: { date: string; bookings: number; revenue: number }[];
+  pendingBookingsList: Booking[];
 }
 
 export interface TenantUser {

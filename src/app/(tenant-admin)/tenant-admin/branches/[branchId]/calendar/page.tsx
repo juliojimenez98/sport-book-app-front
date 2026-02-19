@@ -50,6 +50,7 @@ import {
   BranchHours,
 } from "@/lib/types";
 import { toast } from "@/lib/toast";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CellCoord {
   dayIndex: number;
@@ -125,6 +126,13 @@ export default function TenantBranchCalendarPage() {
     open: boolean;
     booking: Booking | null;
   }>({ open: false, booking: null });
+
+  // Rejection dialog
+  const [rejectDialog, setRejectDialog] = useState<{
+    open: boolean;
+    booking: Booking | null;
+  }>({ open: false, booking: null });
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const weekDays = getWeekDays(currentDate);
 
@@ -263,23 +271,14 @@ export default function TenantBranchCalendarPage() {
 
   const getBookingsForCell = (day: Date, slotStart: string) => {
     const dateStr = day.toISOString().split("T")[0];
-    return bookings.filter((b) => {
-      const bDate = new Date(b.startAt).toISOString().split("T")[0];
-      const bStart = new Date(b.startAt).toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+    return bookings.filter(b => {
+      const bDate = new Date(b.startAt).toISOString().split('T')[0];
+      const bStart = new Date(b.startAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      
       if (bDate !== dateStr || bStart !== slotStart) return false;
-      if (
-        selectedResource !== "all" &&
-        b.resourceId !== parseInt(selectedResource)
-      )
-        return false;
-      if (
-        b.status === BookingStatus.CANCELLED ||
-        b.status === BookingStatus.NO_SHOW
-      )
-        return false;
+      if (selectedResource !== 'all' && b.resourceId !== parseInt(selectedResource)) return false;
+      if (b.status === BookingStatus.CANCELLED || b.status === BookingStatus.REJECTED || b.status === BookingStatus.NO_SHOW) return false;
+      
       return true;
     });
   };
@@ -419,6 +418,50 @@ export default function TenantBranchCalendarPage() {
         },
       );
       setDeleteDialog({ open: false, slot: null });
+      loadData();
+    } catch {
+      // handled by toast.promise
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmBooking = async (booking: Booking) => {
+    setIsSubmitting(true);
+    try {
+      await toast.promise(
+        bookingsApi.confirm(booking.bookingId),
+        {
+          loading: "Confirmando reserva...",
+          success: "Reserva confirmada",
+          error: "Error al confirmar reserva"
+        }
+      );
+      setBookingDialog({ open: false, booking: null });
+      loadData();
+    } catch {
+      // handled by toast.promise
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectBooking = async () => {
+    if (!rejectDialog.booking || !rejectionReason) return;
+    
+    setIsSubmitting(true);
+    try {
+      await toast.promise(
+        bookingsApi.reject(rejectDialog.booking.bookingId, rejectionReason),
+        {
+          loading: "Rechazando reserva...",
+          success: "Reserva rechazada",
+          error: "Error al rechazar reserva"
+        }
+      );
+      setRejectDialog({ open: false, booking: null });
+      setRejectionReason(""); // Reset reason
+      setBookingDialog({ open: false, booking: null }); // Also close details dialog
       loadData();
     } catch {
       // handled by toast.promise
@@ -658,19 +701,20 @@ export default function TenantBranchCalendarPage() {
                                 )}
                                 title={`${b.resource?.name || "Cancha"} - ${b.user?.firstName || b.guest?.firstName || ""} (${b.status})`}
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  setBookingDialog({ open: true, booking: b });
-                                }}
-                              >
-                                <div className="font-semibold truncate">
-                                  {b.resource?.name || "Cancha"}
+                                    e.stopPropagation();
+                                    // If multiple bookings in cell (overlapping pending), show list or pick first?
+                                    // For now just pick this one
+                                    setBookingDialog({ open: true, booking: b });
+                                  }}
+                                >
+                                  <div className="font-semibold truncate">
+                                    {b.resource?.name || "Cancha"}
+                                  </div>
+                                  <div className="truncate opacity-80">
+                                    {b.user?.firstName || b.guest?.firstName || "Usuario"}
+                                  </div>
+                                  {/* Show if verified pending overlap count? UI might be too small */}
                                 </div>
-                                <div className="truncate opacity-80">
-                                  {b.user?.firstName ||
-                                    b.guest?.firstName ||
-                                    ""}
-                                </div>
-                              </div>
                             ))}
                           {!closed && !outsideHours && isBlocked && (
                             <div
@@ -1109,6 +1153,74 @@ export default function TenantBranchCalendarPage() {
               onClick={() => setBookingDialog({ open: false, booking: null })}
             >
               Cerrar
+            </Button>
+            {bookingDialog.booking?.status === BookingStatus.PENDING && (
+              <>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setRejectDialog({
+                      open: true,
+                      booking: bookingDialog.booking,
+                    });
+                    setBookingDialog({ open: false, booking: null });
+                  }}
+                >
+                  Rechazar
+                </Button>
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() =>
+                    bookingDialog.booking &&
+                    handleConfirmBooking(bookingDialog.booking)
+                  }
+                  disabled={isSubmitting}
+                >
+                  Confirmar
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog
+        open={rejectDialog.open}
+        onOpenChange={(open) =>
+          !open && setRejectDialog({ open: false, booking: null })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rechazar Reserva</DialogTitle>
+            <DialogDescription>
+              Indica el motivo del rechazo. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Motivo</Label>
+              <Textarea
+                placeholder="Ej: Mantenimiento imprevisto, horario no disponible..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialog({ open: false, booking: null })}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectBooking}
+              disabled={!rejectionReason || isSubmitting}
+            >
+              Rechazar Reserva
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Activity,
   Clock,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { getInitials, cn } from "@/lib/utils";
@@ -29,30 +30,59 @@ interface AdminSidebarProps {
   }[];
   title: string;
   subtitle?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function AdminSidebar({ navItems, title, subtitle }: AdminSidebarProps) {
+export function AdminSidebar({
+  navItems,
+  title,
+  subtitle,
+  isOpen,
+  onClose,
+}: AdminSidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r bg-card transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64",
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          onClick={onClose}
+        />
       )}
-    >
+
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 h-screen border-r bg-card transition-transform duration-300 md:translate-x-0",
+          isCollapsed ? "w-16" : "w-64",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
       <div className="flex h-full flex-col">
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b px-4">
           {!isCollapsed && (
-            <Link href="/" className="flex items-center gap-2">
-              <CalendarDays className="h-8 w-8 text-primary" />
-              <span className="text-lg font-bold gradient-text">
-                BookingPro
-              </span>
-            </Link>
+            <div className="flex items-center justify-between w-full">
+              <Link href="/" className="flex items-center gap-2">
+                <CalendarDays className="h-8 w-8 text-primary" />
+                <span className="text-lg font-bold gradient-text">
+                  BookingPro
+                </span>
+              </Link>
+              {/* Mobile Close Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                onClick={onClose}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           )}
           {isCollapsed && (
             <CalendarDays className="h-8 w-8 text-primary mx-auto" />
@@ -79,6 +109,11 @@ export function AdminSidebar({ navItems, title, subtitle }: AdminSidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    onClick={() => {
+                        if (window.innerWidth < 768 && onClose) {
+                            onClose();
+                        }
+                    }}
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       isActive
@@ -169,11 +204,18 @@ export function AdminSidebar({ navItems, title, subtitle }: AdminSidebarProps) {
         </div>
       </div>
     </aside>
+    </>
   );
 }
 
 // Pre-configured sidebars for different admin types
-export function SuperAdminSidebar() {
+export function SuperAdminSidebar({
+  isOpen,
+  onClose,
+}: {
+  isOpen?: boolean;
+  onClose?: () => void;
+}) {
   const navItems = [
     { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
     {
@@ -191,11 +233,21 @@ export function SuperAdminSidebar() {
       navItems={navItems}
       title="Super Admin"
       subtitle="Administración global"
+      isOpen={isOpen}
+      onClose={onClose}
     />
   );
 }
 
-export function TenantAdminSidebar({ tenantName }: { tenantName?: string }) {
+export function TenantAdminSidebar({
+  tenantName,
+  isOpen,
+  onClose,
+}: {
+  tenantName?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
+}) {
   const navItems = [
     { href: "/tenant-admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/tenant-admin/branches", label: "Sucursales", icon: Building2 },
@@ -208,11 +260,21 @@ export function TenantAdminSidebar({ tenantName }: { tenantName?: string }) {
       navItems={navItems}
       title="Admin Centro Deportivo"
       subtitle={tenantName}
+      isOpen={isOpen}
+      onClose={onClose}
     />
   );
 }
 
-export function BranchAdminSidebar({ branchName }: { branchName?: string }) {
+export function BranchAdminSidebar({
+  branchName,
+  isOpen,
+  onClose,
+}: {
+  branchName?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
+}) {
   const navItems = [
     { href: "/branch-admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/branch-admin/calendar", label: "Calendario", icon: CalendarDays },
@@ -226,6 +288,8 @@ export function BranchAdminSidebar({ branchName }: { branchName?: string }) {
       navItems={navItems}
       title="Admin Sucursal"
       subtitle={branchName}
+      isOpen={isOpen}
+      onClose={onClose}
     />
   );
 }
