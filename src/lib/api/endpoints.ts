@@ -212,7 +212,7 @@ export const bookingsApi = {
 // ============================================
 
 export const usersApi = {
-  getMyBookings: () => api.get<Booking[]>("/users/me/bookings"),
+  getMyBookings: () => api.get<PaginatedResponse<Booking>>("/users/me/bookings"),
 
   list: (params?: {
     page?: number;

@@ -53,8 +53,8 @@ export default function BookingsPage() {
 
   const loadBookings = async () => {
     try {
-      const data = await usersApi.getMyBookings();
-      setBookings(data);
+      const response = await usersApi.getMyBookings();
+      setBookings(response.data);
     } catch (error) {
       toast.error("Error al cargar las reservas");
     } finally {
@@ -276,20 +276,22 @@ export default function BookingsPage() {
               <AlertCircle className="h-5 w-5 text-destructive" />
               Cancelar reserva
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription asChild>
+              <div>
               ¿Estás seguro de que deseas cancelar esta reserva?
               {cancelDialog.booking && (
                 <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <p className="font-medium">
+                  <span className="block font-medium">
                     {cancelDialog.booking.resource?.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
+                  </span>
+                  <span className="block text-sm text-muted-foreground">
                     {formatDate(cancelDialog.booking.startAt)} •{" "}
                     {formatTime(cancelDialog.booking.startAt)} -{" "}
                     {formatTime(cancelDialog.booking.endAt)}
-                  </p>
+                  </span>
                 </div>
               )}
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -219,18 +219,26 @@ export interface TimeSlot {
 }
 
 // Calendar
-export interface CalendarSlot {
+export interface CalendarBooking {
+  id: number;
   startAt: string;
   endAt: string;
-  isAvailable: boolean;
-  bookingId?: number;
+  status: string;
+}
+
+export interface CalendarBlockedSlot {
+  date: string;
+  startTime: string;
+  endTime: string;
 }
 
 export interface CalendarResponse {
   resourceId: number;
+  resourceName: string;
   from: string;
   to: string;
-  slots: CalendarSlot[];
+  bookings: CalendarBooking[];
+  blockedSlots: CalendarBlockedSlot[];
 }
 
 // API responses

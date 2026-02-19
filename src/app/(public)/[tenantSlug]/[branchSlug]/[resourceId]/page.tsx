@@ -39,7 +39,7 @@ import {
   resourcesApi,
   branchesApi,
 } from "@/lib/api/endpoints";
-import { Resource, BranchHours } from "@/lib/types";
+import { Resource, BranchHours, CalendarBooking, CalendarBlockedSlot } from "@/lib/types";
 import { formatCurrency, formatDate, cn, generateTimeSlots } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
@@ -55,18 +55,7 @@ const AMENITIES = [
   { key: "hasEquipmentRental", label: "Renta de equipo", icon: Dumbbell },
 ] as const;
 
-interface CalendarBooking {
-  id: number;
-  startAt: string;
-  endAt: string;
-  status: string;
-}
-
-interface CalendarBlockedSlot {
-  date: string;
-  startTime: string;
-  endTime: string;
-}
+// CalendarBooking and CalendarBlockedSlot are imported from @/lib/types
 
 export default function ResourceDetailPage() {
   const params = useParams();
@@ -171,16 +160,8 @@ export default function ResourceDetailPage() {
         dateStr,
       );
 
-      // Extract data - handle both wrapped and unwrapped responses
-      const data =
-        (calendarData as unknown as { data?: unknown }).data || calendarData;
-      const typedData = data as {
-        bookings?: CalendarBooking[];
-        blockedSlots?: CalendarBlockedSlot[];
-      };
-
       // Map bookings to booked start times
-      const bookings = typedData.bookings || [];
+      const bookings = calendarData.bookings || [];
       const booked = bookings.map((b: CalendarBooking) => {
         const startDate = new Date(b.startAt);
         return startDate.toLocaleTimeString("en-GB", {
@@ -191,7 +172,7 @@ export default function ResourceDetailPage() {
       setBookedSlots(booked);
 
       // Store blocked slots
-      setBlockedSlotsList(typedData.blockedSlots || []);
+      setBlockedSlotsList(calendarData.blockedSlots || []);
     } catch (error) {
       console.error("Error fetching calendar data:", error);
       setBookedSlots([]);
@@ -200,13 +181,21 @@ export default function ResourceDetailPage() {
   };
 
   const handleDateChange = (days: number) => {
+    const today = new Date(new Date().setHours(0, 0, 0, 0));
     const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + days);
-    // Don't allow past dates
-    if (newDate >= new Date(new Date().setHours(0, 0, 0, 0))) {
-      setSelectedDate(newDate);
-      setSelectedSlot(null);
-      setBookingSuccess(null);
+    
+    // Skip closed days (try up to 7 days to avoid infinite loop)
+    for (let i = 0; i < 7; i++) {
+      newDate.setDate(newDate.getDate() + days);
+      // Don't allow past dates
+      if (newDate < today) return;
+      // If this day is open, use it
+      if (!isDayClosed(newDate)) {
+        setSelectedDate(new Date(newDate));
+        setSelectedSlot(null);
+        setBookingSuccess(null);
+        return;
+      }
     }
   };
 
