@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -161,18 +161,23 @@ export default function TenantUsersPage() {
 
     setIsSubmitting(true);
     try {
-      await usersApi.assignRole(selectedUser.id, {
-        roleId: parseInt(selectedRoleId),
-        scope: "branch",
-        tenantId: tenantId,
-        branchId: parseInt(selectedBranchId),
-      });
-      toast.success("Rol asignado correctamente");
+      await toast.promise(
+        usersApi.assignRole(selectedUser.userId, {
+          roleId: parseInt(selectedRoleId),
+          scope: "branch",
+          tenantId: tenantId,
+          branchId: parseInt(selectedBranchId),
+        }),
+        {
+          loading: "Asignando rol...",
+          success: "Rol asignado correctamente",
+          error: "Error al asignar rol",
+        },
+      );
       setIsRoleDialogOpen(false);
       loadUsers();
-    } catch (error: any) {
-      console.error("Error assigning role:", error);
-      toast.error(error?.message || "Error al asignar rol");
+    } catch {
+      // error already handled by toast.promise
     } finally {
       setIsSubmitting(false);
     }
@@ -180,11 +185,14 @@ export default function TenantUsersPage() {
 
   const handleRemoveRole = async (userId: number, roleId: number) => {
     try {
-      await usersApi.removeRole(userId, roleId);
-      toast.success("Rol removido");
+      await toast.promise(usersApi.removeRole(userId, roleId), {
+        loading: "Removiendo rol...",
+        success: "Rol removido",
+        error: "Error al remover rol",
+      });
       loadUsers();
-    } catch (error) {
-      toast.error("Error al remover rol");
+    } catch {
+      // error already handled by toast.promise
     }
   };
 
@@ -284,7 +292,7 @@ export default function TenantUsersPage() {
       ) : (
         <div className="grid gap-4">
           {users.map((user: UserProfile) => (
-            <Card key={user.id}>
+            <Card key={user.userId}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -348,8 +356,9 @@ export default function TenantUsersPage() {
                                     className="h-5 w-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                     onClick={() =>
                                       handleRemoveRole(
-                                        user.id,
-                                        userRole.roleId || userRole.role?.id,
+                                        user.userId,
+                                        userRole.roleId ||
+                                          userRole.role?.roleId,
                                       )
                                     }
                                   >
@@ -492,7 +501,10 @@ export default function TenantUsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
+                    <SelectItem
+                      key={role.roleId}
+                      value={role.roleId.toString()}
+                    >
                       {formatRoleName(role.name)}
                     </SelectItem>
                   ))}
@@ -500,7 +512,7 @@ export default function TenantUsersPage() {
               </Select>
               {selectedRoleId && (
                 <p className="text-xs text-muted-foreground">
-                  {roles.find((r) => r.id.toString() === selectedRoleId)
+                  {roles.find((r) => r.roleId.toString() === selectedRoleId)
                     ?.name === "branch_admin"
                     ? "Admin Sucursal: puede gestionar la sucursal, sus canchas y reservas."
                     : "Staff: puede ver y gestionar las reservas de la sucursal."}
@@ -526,7 +538,10 @@ export default function TenantUsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                    <SelectItem
+                      key={branch.branchId}
+                      value={branch.branchId.toString()}
+                    >
                       {branch.name}
                     </SelectItem>
                   ))}

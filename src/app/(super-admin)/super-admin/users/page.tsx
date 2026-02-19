@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -193,22 +193,27 @@ export default function UsersPage() {
 
     setIsSubmitting(true);
     try {
-      await usersApi.assignRole(selectedUser.id, {
-        roleId: parseInt(selectedRoleId),
-        scope: selectedScope,
-        ...(selectedScope === "tenant" &&
-          selectedTenantId && { tenantId: parseInt(selectedTenantId) }),
-        ...(selectedScope === "branch" &&
-          selectedTenantId && { tenantId: parseInt(selectedTenantId) }),
-        ...(selectedScope === "branch" &&
-          selectedBranchId && { branchId: parseInt(selectedBranchId) }),
-      });
-      toast.success("Rol asignado correctamente");
+      await toast.promise(
+        usersApi.assignRole(selectedUser.userId, {
+          roleId: parseInt(selectedRoleId),
+          scope: selectedScope,
+          ...(selectedScope === "tenant" &&
+            selectedTenantId && { tenantId: parseInt(selectedTenantId) }),
+          ...(selectedScope === "branch" &&
+            selectedTenantId && { tenantId: parseInt(selectedTenantId) }),
+          ...(selectedScope === "branch" &&
+            selectedBranchId && { branchId: parseInt(selectedBranchId) }),
+        }),
+        {
+          loading: "Asignando rol...",
+          success: "Rol asignado correctamente",
+          error: "Error al asignar rol",
+        },
+      );
       setIsRoleDialogOpen(false);
       loadUsers();
-    } catch (error) {
-      console.error("Error assigning role:", error);
-      toast.error("Error al asignar rol");
+    } catch {
+      // error already handled by toast.promise
     } finally {
       setIsSubmitting(false);
     }
@@ -216,11 +221,14 @@ export default function UsersPage() {
 
   const handleRemoveRole = async (userId: number, roleId: number) => {
     try {
-      await usersApi.removeRole(userId, roleId);
-      toast.success("Rol removido");
+      await toast.promise(usersApi.removeRole(userId, roleId), {
+        loading: "Removiendo rol...",
+        success: "Rol removido",
+        error: "Error al remover rol",
+      });
       loadUsers();
-    } catch (error) {
-      toast.error("Error al remover rol");
+    } catch {
+      // error already handled by toast.promise
     }
   };
 
@@ -337,8 +345,8 @@ export default function UsersPage() {
                       </SelectItem>
                       {tenants.map((tenant) => (
                         <SelectItem
-                          key={tenant.id}
-                          value={tenant.id.toString()}
+                          key={tenant.tenantId}
+                          value={tenant.tenantId.toString()}
                         >
                           {tenant.name}
                         </SelectItem>
@@ -361,7 +369,10 @@ export default function UsersPage() {
                     <SelectContent>
                       <SelectItem value="all">Todos los roles</SelectItem>
                       {roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id.toString()}>
+                        <SelectItem
+                          key={role.roleId}
+                          value={role.roleId.toString()}
+                        >
                           {formatRoleName(role.name)}
                         </SelectItem>
                       ))}
@@ -390,7 +401,7 @@ export default function UsersPage() {
       ) : (
         <div className="grid gap-4">
           {users.map((user: UserProfile) => (
-            <Card key={user.id}>
+            <Card key={user.userId}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -462,8 +473,8 @@ export default function UsersPage() {
                                   className="h-5 w-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                   onClick={() =>
                                     handleRemoveRole(
-                                      user.id,
-                                      userRole.roleId || userRole.role?.id,
+                                      user.userId,
+                                      userRole.roleId || userRole.role?.roleId,
                                     )
                                   }
                                 >
@@ -490,7 +501,7 @@ export default function UsersPage() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t flex items-center gap-6 text-sm text-muted-foreground">
-                  <span>ID: {user.id}</span>
+                  <span>ID: {user.userId}</span>
                   {user.createdAt && (
                     <span>Registrado: {formatDate(user.createdAt)}</span>
                   )}
@@ -603,7 +614,7 @@ export default function UsersPage() {
                 onValueChange={(value) => {
                   setSelectedRoleId(value);
                   // Auto-select scope based on role
-                  const role = roles.find((r) => r.id.toString() === value);
+                  const role = roles.find((r) => r.roleId.toString() === value);
                   if (role) {
                     if (role.name === "super_admin") {
                       setSelectedScope("global");
@@ -620,7 +631,10 @@ export default function UsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
+                    <SelectItem
+                      key={role.roleId}
+                      value={role.roleId.toString()}
+                    >
                       {formatRoleName(role.name)}
                     </SelectItem>
                   ))}
@@ -655,7 +669,10 @@ export default function UsersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {tenants.map((tenant) => (
-                      <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                      <SelectItem
+                        key={tenant.tenantId}
+                        value={tenant.tenantId.toString()}
+                      >
                         {tenant.name}
                       </SelectItem>
                     ))}
@@ -678,8 +695,8 @@ export default function UsersPage() {
                     <SelectContent>
                       {tenants.map((tenant) => (
                         <SelectItem
-                          key={tenant.id}
-                          value={tenant.id.toString()}
+                          key={tenant.tenantId}
+                          value={tenant.tenantId.toString()}
                         >
                           {tenant.name}
                         </SelectItem>
@@ -687,7 +704,6 @@ export default function UsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Sucursal</Label>
                   <Select
@@ -711,8 +727,8 @@ export default function UsersPage() {
                     <SelectContent>
                       {branches.map((branch) => (
                         <SelectItem
-                          key={branch.id}
-                          value={branch.id.toString()}
+                          key={branch.branchId}
+                          value={branch.branchId.toString()}
                         >
                           {branch.name}
                         </SelectItem>

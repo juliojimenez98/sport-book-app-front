@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -100,7 +100,7 @@ export default function TenantBranchResourcesPage() {
     setEditingResource(null);
     setFormData({
       name: "",
-      sportId: sports.length > 0 ? sports[0].id : 0,
+      sportId: sports.length > 0 ? sports[0].sportId : 0,
       description: "",
       pricePerHour: 15000,
       currency: "CLP",
@@ -124,24 +124,35 @@ export default function TenantBranchResourcesPage() {
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.sportId || !formData.pricePerHour) {
-      toast.error("Completa todos los campos requeridos");
+      toast.warning("Completa todos los campos requeridos");
       return;
     }
 
     setIsSubmitting(true);
     try {
       if (editingResource) {
-        await resourcesApi.update(editingResource.id, formData);
-        toast.success("Cancha actualizada");
+        await toast.promise(
+          resourcesApi.update(editingResource.resourceId, formData),
+          {
+            loading: "Actualizando cancha...",
+            success: "Cancha actualizada",
+            error: "Error al guardar cancha",
+          },
+        );
       } else {
-        await branchesApi.createResource(branchId, formData as ResourceForm);
-        toast.success("Cancha creada");
+        await toast.promise(
+          branchesApi.createResource(branchId, formData as ResourceForm),
+          {
+            loading: "Creando cancha...",
+            success: "Cancha creada",
+            error: "Error al guardar cancha",
+          },
+        );
       }
       setIsDialogOpen(false);
       loadData();
-    } catch (error: any) {
-      console.error("Error saving resource:", error);
-      toast.error(error?.message || "Error al guardar cancha");
+    } catch {
+      // error already handled by toast.promise
     } finally {
       setIsSubmitting(false);
     }
@@ -149,12 +160,15 @@ export default function TenantBranchResourcesPage() {
 
   const handleDelete = async (resource: Resource) => {
     try {
-      await resourcesApi.delete(resource.id);
-      toast.success("Cancha eliminada");
+      await toast.promise(resourcesApi.delete(resource.resourceId), {
+        loading: "Eliminando cancha...",
+        success: "Cancha eliminada",
+        error: "Error al eliminar cancha",
+      });
       setDeleteConfirm(null);
       loadData();
-    } catch (error) {
-      toast.error("Error al eliminar cancha");
+    } catch {
+      // error already handled by toast.promise
     }
   };
 
@@ -232,7 +246,7 @@ export default function TenantBranchResourcesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {resources.map((resource) => (
-            <Card key={resource.id}>
+            <Card key={resource.resourceId}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
@@ -328,7 +342,10 @@ export default function TenantBranchResourcesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {sports.map((sport) => (
-                    <SelectItem key={sport.id} value={sport.id.toString()}>
+                    <SelectItem
+                      key={sport.sportId}
+                      value={sport.sportId.toString()}
+                    >
                       {sport.name}
                     </SelectItem>
                   ))}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -143,9 +143,7 @@ export default function BranchPage() {
           </Link>
 
           <div className="max-w-4xl">
-            <p className="text-sm text-muted-foreground mb-1">
-              {tenant.name}
-            </p>
+            <p className="text-sm text-muted-foreground mb-1">{tenant.name}</p>
             <h1 className="text-3xl sm:text-4xl font-bold mb-2">
               {branch.name}
             </h1>
@@ -215,7 +213,7 @@ export default function BranchPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {resources.map((resource) => (
                 <Card
-                  key={resource.id}
+                  key={resource.resourceId}
                   className="overflow-hidden hover:shadow-lg transition-shadow"
                 >
                   <div className="h-40 bg-linear-to-br from-primary/20 to-accent/20 flex items-center justify-center">
@@ -258,7 +256,7 @@ export default function BranchPage() {
 
                     <Button asChild className="w-full">
                       <Link
-                        href={`/${tenantSlug}/${branchSlug}/${resource.id}`}
+                        href={`/${tenantSlug}/${branchSlug}/${resource.resourceId}`}
                       >
                         Ver disponibilidad
                       </Link>

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import Link from "next/link";
 import {
   Card,
@@ -155,16 +155,25 @@ export default function TenantsPage() {
         accentColor: accentColor || undefined,
       };
       if (editingTenant) {
-        await tenantsApi.update(editingTenant.id, submitData);
-        toast.success("Centro deportivo actualizado");
+        await toast.promise(
+          tenantsApi.update(editingTenant.tenantId, submitData),
+          {
+            loading: "Actualizando centro deportivo...",
+            success: "Centro deportivo actualizado",
+            error: "Error al actualizar",
+          },
+        );
       } else {
-        await tenantsApi.create(submitData);
-        toast.success("Centro deportivo creado");
+        await toast.promise(tenantsApi.create(submitData), {
+          loading: "Creando centro deportivo...",
+          success: "Centro deportivo creado",
+          error: "Error al crear",
+        });
       }
       setIsDialogOpen(false);
       loadTenants();
-    } catch (error) {
-      toast.error(editingTenant ? "Error al actualizar" : "Error al crear");
+    } catch {
+      // error already handled by toast.promise
     } finally {
       setIsSubmitting(false);
     }
@@ -172,12 +181,15 @@ export default function TenantsPage() {
 
   const handleDelete = async (tenant: Tenant) => {
     try {
-      await tenantsApi.delete(tenant.id);
-      toast.success("Centro deportivo eliminado");
+      await toast.promise(tenantsApi.delete(tenant.tenantId), {
+        loading: "Eliminando centro deportivo...",
+        success: "Centro deportivo eliminado",
+        error: "Error al eliminar",
+      });
       setDeleteConfirm(null);
       loadTenants();
-    } catch (error) {
-      toast.error("Error al eliminar");
+    } catch {
+      // error already handled by toast.promise
     }
   };
 
@@ -240,7 +252,7 @@ export default function TenantsPage() {
       ) : (
         <div className="grid gap-4">
           {tenants.map((tenant) => (
-            <Card key={tenant.id}>
+            <Card key={tenant.tenantId}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -314,7 +326,9 @@ export default function TenantsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" asChild>
-                      <Link href={`/super-admin/tenants/${tenant.id}/branches`}>
+                      <Link
+                        href={`/super-admin/tenants/${tenant.tenantId}/branches`}
+                      >
                         <Eye className="h-4 w-4" />
                       </Link>
                     </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import Link from "next/link";
 import {
   Card,
@@ -37,13 +37,36 @@ import {
   Mail,
   ShieldCheck,
   ShieldOff,
+  Clock,
+  CalendarDays,
+  ClipboardCheck,
 } from "lucide-react";
-import { branchesApi } from "@/lib/api";
-import { Branch, BranchForm } from "@/lib/types";
+import { branchesApi, tenantsApi } from "@/lib/api";
+import { useAuth } from "@/contexts";
+import { Branch, BranchForm, RoleName, RoleScope } from "@/lib/types";
 
 export default function TenantBranchesPage() {
+  const { user: currentUser } = useAuth();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Create dialog state
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createFormData, setCreateFormData] = useState<BranchForm>({
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+    hasParking: false,
+    hasBathrooms: false,
+    hasShowers: false,
+    hasLockers: false,
+    hasWifi: false,
+    hasCafeteria: false,
+    hasEquipmentRental: false,
+    amenitiesDescription: "",
+  });
 
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -105,6 +128,7 @@ export default function TenantBranchesPage() {
       hasCafeteria: branch.hasCafeteria || false,
       hasEquipmentRental: branch.hasEquipmentRental || false,
       amenitiesDescription: branch.amenitiesDescription || "",
+      requiresApproval: branch.requiresApproval || false,
     });
     setIsEditDialogOpen(true);
   };
@@ -114,13 +138,18 @@ export default function TenantBranchesPage() {
 
     setIsSubmitting(true);
     try {
-      await branchesApi.update(selectedBranch.id, formData);
-      toast.success("Sucursal actualizada correctamente");
+      await toast.promise(
+        branchesApi.update(selectedBranch.branchId, formData),
+        {
+          loading: "Actualizando sucursal...",
+          success: "Sucursal actualizada correctamente",
+          error: "Error al actualizar sucursal",
+        },
+      );
       setIsEditDialogOpen(false);
       loadBranches();
-    } catch (error) {
-      console.error("Error updating branch:", error);
-      toast.error("Error al actualizar sucursal");
+    } catch {
+      // error already handled by toast.promise
     } finally {
       setIsSubmitting(false);
     }
@@ -136,21 +165,76 @@ export default function TenantBranchesPage() {
 
     setIsToggling(true);
     try {
-      await branchesApi.update(toggleBranch.id, {
-        isActive: !toggleBranch.isActive,
-      });
-      toast.success(
-        toggleBranch.isActive
-          ? "Sucursal bloqueada correctamente"
-          : "Sucursal desbloqueada correctamente",
+      const msg = toggleBranch.isActive
+        ? "Bloqueando sucursal..."
+        : "Desbloqueando sucursal...";
+      const successMsg = toggleBranch.isActive
+        ? "Sucursal bloqueada correctamente"
+        : "Sucursal desbloqueada correctamente";
+      await toast.promise(
+        branchesApi.update(toggleBranch.branchId, {
+          isActive: !toggleBranch.isActive,
+        }),
+        {
+          loading: msg,
+          success: successMsg,
+          error: "Error al cambiar el estado de la sucursal",
+        },
       );
       setIsToggleDialogOpen(false);
       loadBranches();
-    } catch (error) {
-      console.error("Error toggling branch:", error);
-      toast.error("Error al cambiar el estado de la sucursal");
+    } catch {
+      // error already handled by toast.promise
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  // Get tenant ID from current user's role
+  const tenantRole = currentUser?.roles?.find((r) => {
+    const roleName = r.roleName || r.role?.name;
+    return (
+      roleName === RoleName.TENANT_ADMIN &&
+      (r.scope === RoleScope.TENANT || r.tenantId)
+    );
+  });
+  const tenantId = tenantRole?.tenantId;
+
+  const openCreateDialog = () => {
+    setCreateFormData({
+      name: "",
+      address: "",
+      phone: "",
+      email: "",
+      hasParking: false,
+      hasBathrooms: false,
+      hasShowers: false,
+      hasLockers: false,
+      hasWifi: false,
+      hasCafeteria: false,
+      hasEquipmentRental: false,
+      amenitiesDescription: "",
+      requiresApproval: false,
+    });
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleCreate = async () => {
+    if (!tenantId || !createFormData.name) return;
+
+    setIsCreating(true);
+    try {
+      await toast.promise(tenantsApi.createBranch(tenantId, createFormData), {
+        loading: "Creando sucursal...",
+        success: "Sucursal creada correctamente",
+        error: "Error al crear sucursal",
+      });
+      setIsCreateDialogOpen(false);
+      loadBranches();
+    } catch {
+      // error already handled by toast.promise
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -199,7 +283,7 @@ export default function TenantBranchesPage() {
             total)
           </p>
         </div>
-        <Button>
+        <Button onClick={openCreateDialog}>
           <Plus className="h-4 w-4 mr-2" />
           Nueva sucursal
         </Button>
@@ -213,7 +297,7 @@ export default function TenantBranchesPage() {
             <p className="text-muted-foreground mb-4">
               Crea tu primera sucursal para comenzar
             </p>
-            <Button>
+            <Button onClick={openCreateDialog}>
               <Plus className="h-4 w-4 mr-2" />
               Crear sucursal
             </Button>
@@ -223,7 +307,7 @@ export default function TenantBranchesPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {branches.map((branch) => (
             <Card
-              key={branch.id}
+              key={branch.branchId}
               className={`overflow-hidden ${!branch.isActive ? "opacity-60 border-destructive/40" : ""}`}
             >
               <div
@@ -303,10 +387,29 @@ export default function TenantBranchesPage() {
                     asChild
                   >
                     <Link
-                      href={`/tenant-admin/branches/${branch.id}/resources`}
+                      href={`/tenant-admin/branches/${branch.branchId}/resources`}
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       Canchas
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild title="Horarios">
+                    <Link
+                      href={`/tenant-admin/branches/${branch.branchId}/hours`}
+                    >
+                      <Clock className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    title="Calendario"
+                  >
+                    <Link
+                      href={`/tenant-admin/branches/${branch.branchId}/calendar`}
+                    >
+                      <CalendarDays className="h-4 w-4" />
                     </Link>
                   </Button>
                   <Button
@@ -457,6 +560,34 @@ export default function TenantBranchesPage() {
                 />
               </div>
             </div>
+
+            {/* Booking Settings */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground">
+                Configuración de reservas
+              </h3>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">
+                      Requiere aprobación
+                    </span>
+                    <p className="text-xs text-muted-foreground">
+                      Las reservas quedarán pendientes hasta que un
+                      administrador las confirme
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={formData.requiresApproval as boolean}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, requiresApproval: checked })
+                  }
+                />
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
@@ -510,6 +641,192 @@ export default function TenantBranchesPage() {
                 : toggleBranch?.isActive
                   ? "Bloquear"
                   : "Desbloquear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Branch Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nueva sucursal</DialogTitle>
+            <DialogDescription>
+              Crea una nueva sucursal para tu centro deportivo
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground">
+                Información básica
+              </h3>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="create-name">Nombre *</Label>
+                  <Input
+                    id="create-name"
+                    value={createFormData.name}
+                    onChange={(e) =>
+                      setCreateFormData({
+                        ...createFormData,
+                        name: e.target.value,
+                      })
+                    }
+                    placeholder="Ej: Sede Central"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="create-phone">Teléfono</Label>
+                  <Input
+                    id="create-phone"
+                    value={createFormData.phone}
+                    onChange={(e) =>
+                      setCreateFormData({
+                        ...createFormData,
+                        phone: e.target.value,
+                      })
+                    }
+                    placeholder="+56 9 1234 5678"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-email">Email</Label>
+                <Input
+                  id="create-email"
+                  type="email"
+                  value={createFormData.email}
+                  onChange={(e) =>
+                    setCreateFormData({
+                      ...createFormData,
+                      email: e.target.value,
+                    })
+                  }
+                  placeholder="sucursal@centro.cl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-address">Dirección</Label>
+                <Input
+                  id="create-address"
+                  value={createFormData.address}
+                  onChange={(e) =>
+                    setCreateFormData({
+                      ...createFormData,
+                      address: e.target.value,
+                    })
+                  }
+                  placeholder="Dirección completa"
+                />
+              </div>
+            </div>
+
+            {/* Amenities */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground">
+                Amenidades
+              </h3>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {amenities.map((amenity) => {
+                  const Icon = amenity.icon;
+                  return (
+                    <div
+                      key={amenity.key}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm">{amenity.label}</span>
+                      </div>
+                      <Switch
+                        checked={
+                          createFormData[
+                            amenity.key as keyof BranchForm
+                          ] as boolean
+                        }
+                        onCheckedChange={(checked) =>
+                          setCreateFormData({
+                            ...createFormData,
+                            [amenity.key]: checked,
+                          })
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-amenitiesDescription">
+                  Descripción adicional de amenidades
+                </Label>
+                <Textarea
+                  id="create-amenitiesDescription"
+                  value={createFormData.amenitiesDescription}
+                  onChange={(e) =>
+                    setCreateFormData({
+                      ...createFormData,
+                      amenitiesDescription: e.target.value,
+                    })
+                  }
+                  placeholder="Información adicional sobre las instalaciones..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Booking Settings */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm text-muted-foreground">
+                Configuración de reservas
+              </h3>
+
+              <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">
+                      Requiere aprobación
+                    </span>
+                    <p className="text-xs text-muted-foreground">
+                      Las reservas quedarán pendientes hasta que un
+                      administrador las confirme
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={createFormData.requiresApproval as boolean}
+                  onCheckedChange={(checked) =>
+                    setCreateFormData({
+                      ...createFormData,
+                      requiresApproval: checked,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!createFormData.name || isCreating}
+            >
+              {isCreating ? "Creando..." : "Crear sucursal"}
             </Button>
           </DialogFooter>
         </DialogContent>

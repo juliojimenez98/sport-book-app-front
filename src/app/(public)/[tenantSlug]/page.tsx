@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -184,7 +184,7 @@ export default function TenantPage() {
                   const amenities = getBranchAmenities(branch);
                   return (
                     <Link
-                      key={branch.id}
+                      key={branch.branchId}
                       href={`/${tenantSlug}/${branch.slug}`}
                       className="block group"
                     >

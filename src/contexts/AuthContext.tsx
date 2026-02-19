@@ -16,7 +16,7 @@ import {
   RoleScope,
 } from "@/lib/types";
 import { authApi, getTokens, setTokens, clearTokens } from "@/lib/api";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -62,54 +62,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (data: LoginForm): Promise<boolean> => {
     try {
-      const response = await authApi.login(data);
+      const response = await toast.promise(authApi.login(data), {
+        loading: "Iniciando sesión...",
+        success: (res) =>
+          `¡Bienvenido, ${res.user.firstName || res.user.email}!`,
+        error: "Error al iniciar sesión",
+      });
       setTokens({
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
       });
       setUser(response.user);
-      toast.success(
-        `¡Bienvenido, ${response.user.firstName || response.user.email}!`,
-      );
       return true;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al iniciar sesión";
-      toast.error(message);
+    } catch {
       return false;
     }
   }, []);
 
   const register = useCallback(async (data: RegisterForm): Promise<boolean> => {
     try {
-      // Register the user
-      await authApi.register(data);
-      // After registration, login automatically
-      const loginResponse = await authApi.login({
-        email: data.email,
-        password: data.password,
-      });
+      // Register the user then login automatically
+      const loginResponse = await toast.promise(
+        authApi
+          .register(data)
+          .then(() =>
+            authApi.login({ email: data.email, password: data.password }),
+          ),
+        {
+          loading: "Creando cuenta...",
+          success: "¡Cuenta creada exitosamente!",
+          error: "Error al registrarse",
+        },
+      );
       setTokens({
         accessToken: loginResponse.accessToken,
         refreshToken: loginResponse.refreshToken,
       });
       setUser(loginResponse.user);
-      toast.success("¡Cuenta creada exitosamente!");
       return true;
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Error al registrarse";
-      toast.error(message);
+    } catch {
       return false;
     }
   }, []);
 
   const logout = useCallback(async () => {
+    const id = toast.loading("Cerrando sesión...");
     try {
       await authApi.logout();
     } catch {
       // Ignore logout errors
     } finally {
+      toast.dismiss(id);
       clearTokens();
       setUser(null);
       toast.success("Sesión cerrada");

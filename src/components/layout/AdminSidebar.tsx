@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Activity,
+  Clock,
 } from "lucide-react";
 import { useState } from "react";
 import { getInitials, cn } from "@/lib/utils";
@@ -216,6 +217,7 @@ export function BranchAdminSidebar({ branchName }: { branchName?: string }) {
     { href: "/branch-admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/branch-admin/calendar", label: "Calendario", icon: CalendarDays },
     { href: "/branch-admin/resources", label: "Canchas", icon: Activity },
+    { href: "/branch-admin/hours", label: "Horarios", icon: Clock },
     { href: "/branch-admin/settings", label: "Configuración", icon: Settings },
   ];
 

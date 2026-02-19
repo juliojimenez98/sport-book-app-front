@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
+import { Toaster } from "sileo";
 import { AuthProvider, ThemeProvider } from "@/contexts";
 import "./globals.css";
 
@@ -33,14 +33,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             {children}
-            <Toaster
-              position="top-right"
-              richColors
-              closeButton
-              toastOptions={{
-                duration: 4000,
-              }}
-            />
+            <Toaster position="top-center" />
           </AuthProvider>
         </ThemeProvider>
       </body>

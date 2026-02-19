@@ -17,6 +17,11 @@ import {
   TenantForm,
   BranchForm,
   ResourceForm,
+  TenantDashboardStats,
+  SuperAdminDashboardStats,
+  BranchHours,
+  BlockedSlot,
+  BlockedSlotForm,
 } from "@/lib/types";
 
 // ============================================
@@ -66,6 +71,12 @@ export const tenantsApi = {
 
   createBranch: (tenantId: number, data: BranchForm) =>
     api.post<Branch>(`/tenants/${tenantId}/branches`, data),
+
+  getDashboardStats: (tenantId: number) =>
+    api.get<TenantDashboardStats>(`/tenants/${tenantId}/dashboard-stats`),
+
+  getSuperAdminStats: () =>
+    api.get<SuperAdminDashboardStats>(`/tenants/super-admin-stats`),
 };
 
 // ============================================
@@ -108,6 +119,30 @@ export const branchesApi = {
       : "";
     return api.get<Booking[]>(`/branches/${branchId}/bookings${query}`);
   },
+
+  getHours: (branchId: number) =>
+    api.get<BranchHours[]>(`/branches/${branchId}/hours`, { skipAuth: true }),
+
+  updateHours: (branchId: number, hours: Partial<BranchHours>[]) =>
+    api.put<BranchHours[]>(`/branches/${branchId}/hours`, { hours }),
+
+  getBlockedSlots: (
+    branchId: number,
+    params?: { from?: string; to?: string },
+  ) => {
+    const query = params
+      ? `?${new URLSearchParams(params as Record<string, string>).toString()}`
+      : "";
+    return api.get<BlockedSlot[]>(
+      `/branches/${branchId}/blocked-slots${query}`,
+    );
+  },
+
+  createBlockedSlot: (branchId: number, data: BlockedSlotForm) =>
+    api.post<BlockedSlot>(`/branches/${branchId}/blocked-slots`, data),
+
+  deleteBlockedSlot: (branchId: number, id: number) =>
+    api.delete<void>(`/branches/${branchId}/blocked-slots/${id}`),
 };
 
 // ============================================

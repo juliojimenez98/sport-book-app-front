@@ -210,7 +210,7 @@ export default function HomePage() {
                   const branchCount = (tenant as any).branches?.length || 0;
                   return (
                     <Link
-                      key={tenant.id}
+                      key={tenant.tenantId}
                       href={`/${tenant.slug}`}
                       className="block group"
                     >

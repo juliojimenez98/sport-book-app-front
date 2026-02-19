@@ -33,7 +33,7 @@ export enum RoleScope {
 
 // Base entities
 export interface Tenant {
-  id: number;
+  tenantId: number;
   name: string;
   slug: string;
   email: string;
@@ -48,7 +48,7 @@ export interface Tenant {
 }
 
 export interface Branch {
-  id: number;
+  branchId: number;
   tenantId: number;
   name: string;
   slug: string;
@@ -65,6 +65,8 @@ export interface Branch {
   hasCafeteria: boolean;
   hasEquipmentRental: boolean;
   amenitiesDescription?: string;
+  // Booking settings
+  requiresApproval: boolean;
   // Status
   isActive: boolean;
   createdAt: string;
@@ -73,7 +75,7 @@ export interface Branch {
 }
 
 export interface Sport {
-  id: number;
+  sportId: number;
   name: string;
   description?: string;
   iconUrl?: string;
@@ -87,7 +89,7 @@ export interface BranchSport {
 }
 
 export interface Resource {
-  id: number;
+  resourceId: number;
   branchId: number;
   sportId: number;
   name: string;
@@ -111,7 +113,7 @@ export interface Resource {
 }
 
 export interface BranchHours {
-  id: number;
+  branchHoursId: number;
   branchId: number;
   dayOfWeek: number;
   openTime: string;
@@ -120,7 +122,7 @@ export interface BranchHours {
 }
 
 export interface Guest {
-  id: number;
+  guestId: number;
   email: string;
   firstName?: string;
   lastName?: string;
@@ -128,7 +130,7 @@ export interface Guest {
 }
 
 export interface Booking {
-  id: number;
+  bookingId: number;
   resourceId: number;
   userId?: number;
   guestId?: number;
@@ -147,7 +149,7 @@ export interface Booking {
 }
 
 export interface BookingCancellation {
-  id: number;
+  bookingCancellationId: number;
   bookingId: number;
   cancelledBy?: number;
   reason?: string;
@@ -156,13 +158,13 @@ export interface BookingCancellation {
 
 // Auth & User
 export interface Role {
-  id: number;
+  roleId: number;
   name: RoleName;
   description?: string;
 }
 
 export interface UserRole {
-  id?: number;
+  userRoleId?: number;
   userId?: number;
   roleId: number;
   roleName?: RoleName; // Backend sends this directly from login/me
@@ -175,7 +177,7 @@ export interface UserRole {
 }
 
 export interface UserProfile {
-  id: number;
+  userId: number;
   email: string;
   firstName?: string;
   lastName?: string;
@@ -315,6 +317,7 @@ export interface BranchForm {
   hasCafeteria?: boolean;
   hasEquipmentRental?: boolean;
   amenitiesDescription?: string;
+  requiresApproval?: boolean;
 }
 
 export interface ResourceForm {
@@ -324,4 +327,81 @@ export interface ResourceForm {
   pricePerHour: number;
   currency: string;
   slotMinutes: number;
+}
+
+// Dashboard stats
+export interface TenantDashboardStats {
+  stats: {
+    totalBranches: number;
+    activeBranches: number;
+    totalResources: number;
+    activeResources: number;
+    todayBookings: number;
+    pendingBookings: number;
+    monthlyBookings: number;
+    staffCount: number;
+  };
+  recentBookings: Booking[];
+  branchSummary: {
+    id: number;
+    name: string;
+    isActive: boolean;
+    resourceCount: number;
+  }[];
+  tenantUsers: TenantUser[];
+}
+
+export interface TenantUser {
+  id: number;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  isActive: boolean;
+  roles: {
+    roleId: number;
+    roleName: string;
+    scope: string;
+    branchId?: number;
+    branchName?: string | null;
+  }[];
+}
+
+export interface SuperAdminDashboardStats {
+  stats: {
+    totalTenants: number;
+    activeTenants: number;
+    totalBranches: number;
+    activeBranches: number;
+    totalResources: number;
+    activeResources: number;
+    totalUsers: number;
+    todayBookings: number;
+    pendingBookingsToday: number;
+    monthlyBookings: number;
+    totalBookings: number;
+  };
+  recentTenants: (Tenant & { branches?: Branch[] })[];
+  recentBookings: Booking[];
+}
+
+export interface BlockedSlot {
+  blockedSlotId: number;
+  branchId: number;
+  resourceId?: number | null;
+  date: string;
+  startTime: string;
+  endTime: string;
+  reason?: string;
+  createdBy?: number;
+  createdAt?: string;
+  resource?: Resource;
+}
+
+export interface BlockedSlotForm {
+  date: string;
+  startTime: string;
+  endTime: string;
+  reason?: string;
+  resourceId?: number | null;
 }

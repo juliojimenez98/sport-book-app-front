@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -67,12 +67,15 @@ export default function BookingsPage() {
 
     setIsCancelling(true);
     try {
-      await bookingsApi.cancel(cancelDialog.booking.id);
-      toast.success("Reserva cancelada exitosamente");
+      await toast.promise(bookingsApi.cancel(cancelDialog.booking.bookingId), {
+        loading: "Cancelando reserva...",
+        success: "Reserva cancelada exitosamente",
+        error: "Error al cancelar la reserva",
+      });
       setCancelDialog({ open: false, booking: null });
       loadBookings();
-    } catch (error) {
-      toast.error("Error al cancelar la reserva");
+    } catch {
+      // handled by toast.promise
     } finally {
       setIsCancelling(false);
     }
@@ -146,7 +149,7 @@ export default function BookingsPage() {
         ) : (
           <div className="grid gap-4">
             {activeBookings.map((booking) => (
-              <Card key={booking.id} className="overflow-hidden">
+              <Card key={booking.bookingId} className="overflow-hidden">
                 <CardContent className="p-0">
                   <div className="flex flex-col md:flex-row">
                     <div className="bg-primary/10 p-6 flex flex-col items-center justify-center md:w-40">
@@ -220,7 +223,7 @@ export default function BookingsPage() {
           <div className="grid gap-4">
             {pastBookings.map((booking) => (
               <Card
-                key={booking.id}
+                key={booking.bookingId}
                 className="opacity-75 hover:opacity-100 transition-opacity"
               >
                 <CardContent className="p-4">

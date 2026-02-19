@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -25,6 +27,7 @@ import {
   Ban,
   Trash2,
   Loader2,
+  ArrowLeft,
   CheckCircle2,
   XCircle,
   User,
@@ -37,9 +40,9 @@ import {
   generateTimeSlots,
   formatDate,
 } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
 import { branchesApi, bookingsApi } from "@/lib/api";
 import {
+  Branch,
   Resource,
   Booking,
   BlockedSlot,
@@ -81,10 +84,11 @@ function isCellInSelection(
   );
 }
 
-export default function BranchCalendarPage() {
-  const { getBranchId } = useAuth();
-  const branchId = getBranchId();
+export default function TenantBranchCalendarPage() {
+  const params = useParams();
+  const branchId = parseInt(params.branchId as string);
 
+  const [branch, setBranch] = useState<Branch | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedResource, setSelectedResource] = useState<string>("all");
   const [resources, setResources] = useState<Resource[]>([]);
@@ -152,8 +156,9 @@ export default function BranchCalendarPage() {
     if (!branchId) return;
     setIsLoading(true);
     try {
-      const [resourcesRes, bookingsRes, blockedRes, hoursRes] =
+      const [branchData, resourcesRes, bookingsRes, blockedRes, hoursRes] =
         await Promise.all([
+          branchesApi.get(branchId),
           branchesApi.getResources(branchId),
           branchesApi.getBookings(branchId, {
             from: weekStartStr,
@@ -166,6 +171,7 @@ export default function BranchCalendarPage() {
           branchesApi.getHours(branchId),
         ]);
 
+      setBranch(branchData as Branch);
       setResources(
         Array.isArray(resourcesRes)
           ? resourcesRes
@@ -201,7 +207,6 @@ export default function BranchCalendarPage() {
         finishDragSelection(dragStart, dragEnd);
       }
       if (isDragging && dragStart && !dragEnd) {
-        // Single click (no drag movement)
         finishDragSelection(dragStart, dragStart);
       }
       setIsDragging(false);
@@ -315,7 +320,6 @@ export default function BranchCalendarPage() {
       setBookingDialog({ open: true, booking: cellBookings[0] });
       return;
     }
-    // If clicking a blocked cell, open delete dialog
     const cellBlocked = getBlockedForCell(day, timeSlots[timeIndex].start);
     if (cellBlocked.length > 0) {
       setDeleteDialog({ open: true, slot: cellBlocked[0] });
@@ -338,7 +342,6 @@ export default function BranchCalendarPage() {
   const finishDragSelection = (start: CellCoord, end: CellCoord) => {
     const { minDay, maxDay, minTime, maxTime } = getSelectionRange(start, end);
 
-    // Collect all valid dates in the range (skip past days)
     const dates: string[] = [];
     for (let d = minDay; d <= maxDay; d++) {
       const day = weekDays[d];
@@ -370,7 +373,6 @@ export default function BranchCalendarPage() {
       const resourceId =
         blockResourceId !== "all" ? parseInt(blockResourceId) : null;
       const count = blockDialog.dates.length;
-      // Create one blocked slot per day
       await toast.promise(
         Promise.all(
           blockDialog.dates.map((date) =>
@@ -459,7 +461,15 @@ export default function BranchCalendarPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Calendario</h1>
+          <Link href="/tenant-admin/branches">
+            <Button variant="ghost" size="sm" className="mb-2">
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Volver a sucursales
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold">
+            Calendario{branch ? ` — ${branch.name}` : ""}
+          </h1>
           <p className="text-muted-foreground">
             Arrastra sobre las celdas vacías para bloquear horarios. Soporta
             selección de múltiples días.
@@ -786,7 +796,10 @@ export default function BranchCalendarPage() {
                     type="time"
                     value={blockDialog.endTime}
                     onChange={(e) =>
-                      setBlockDialog((p) => ({ ...p, endTime: e.target.value }))
+                      setBlockDialog((p) => ({
+                        ...p,
+                        endTime: e.target.value,
+                      }))
                     }
                   />
                 </div>

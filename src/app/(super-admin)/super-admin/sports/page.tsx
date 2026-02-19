@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -85,16 +85,22 @@ export default function SportsPage() {
     setIsSubmitting(true);
     try {
       if (editingSport) {
-        await sportsApi.update(editingSport.id, data);
-        toast.success("Deporte actualizado");
+        await toast.promise(sportsApi.update(editingSport.sportId, data), {
+          loading: "Actualizando deporte...",
+          success: "Deporte actualizado",
+          error: "Error al actualizar",
+        });
       } else {
-        await sportsApi.create(data);
-        toast.success("Deporte creado");
+        await toast.promise(sportsApi.create(data), {
+          loading: "Creando deporte...",
+          success: "Deporte creado",
+          error: "Error al crear",
+        });
       }
       setIsDialogOpen(false);
       loadSports();
-    } catch (error) {
-      toast.error(editingSport ? "Error al actualizar" : "Error al crear");
+    } catch {
+      // error already handled by toast.promise
     } finally {
       setIsSubmitting(false);
     }
@@ -102,12 +108,15 @@ export default function SportsPage() {
 
   const handleDelete = async (sport: Sport) => {
     try {
-      await sportsApi.delete(sport.id);
-      toast.success("Deporte eliminado");
+      await toast.promise(sportsApi.delete(sport.sportId), {
+        loading: "Eliminando deporte...",
+        success: "Deporte eliminado",
+        error: "Error al eliminar",
+      });
       setDeleteConfirm(null);
       loadSports();
-    } catch (error) {
-      toast.error("Error al eliminar");
+    } catch {
+      // error already handled by toast.promise
     }
   };
 
@@ -170,7 +179,7 @@ export default function SportsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {sports.map((sport) => (
-            <Card key={sport.id}>
+            <Card key={sport.sportId}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">

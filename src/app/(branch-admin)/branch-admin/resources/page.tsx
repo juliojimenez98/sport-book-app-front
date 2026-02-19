@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   Card,
   CardContent,
@@ -117,7 +117,7 @@ export default function BranchResourcesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {resources.map((resource) => (
-            <Card key={resource.id}>
+            <Card key={resource.resourceId}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
