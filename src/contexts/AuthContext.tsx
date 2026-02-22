@@ -61,44 +61,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (data: LoginForm): Promise<boolean> => {
-    try {
-      const response = await toast.promise(authApi.login(data), {
-        loading: "Iniciando sesión...",
-        success: (res) =>
-          `¡Bienvenido, ${res.user.firstName || res.user.email}!`,
-        error: "Error al iniciar sesión",
-      });
-      setTokens({
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-      });
-      setUser(response.user);
-      return true;
-    } catch {
-      return false;
-    }
+    const response = await toast.promise(authApi.login(data), {
+      loading: "Iniciando sesión...",
+      success: (res) =>
+        `¡Bienvenido, ${res.user.firstName || res.user.email}!`,
+      error: "Error al iniciar sesión",
+    });
+    setTokens({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+    });
+    setUser(response.user);
+    return true;
   }, []);
+
 
   const register = useCallback(async (data: RegisterForm): Promise<boolean> => {
     try {
-      // Register the user then login automatically
-      const loginResponse = await toast.promise(
-        authApi
-          .register(data)
-          .then(() =>
-            authApi.login({ email: data.email, password: data.password }),
-          ),
-        {
-          loading: "Creando cuenta...",
-          success: "¡Cuenta creada exitosamente!",
-          error: "Error al registrarse",
-        },
-      );
-      setTokens({
-        accessToken: loginResponse.accessToken,
-        refreshToken: loginResponse.refreshToken,
+      await toast.promise(authApi.register(data), {
+        loading: "Creando cuenta...",
+        success: "¡Cuenta creada! Revisa tu email para verificar tu cuenta.",
+        error: "Error al registrarse",
       });
-      setUser(loginResponse.user);
+
       return true;
     } catch {
       return false;

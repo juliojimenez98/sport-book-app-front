@@ -19,6 +19,7 @@ import {
   ResourceForm,
   TenantDashboardStats,
   SuperAdminDashboardStats,
+  BranchDashboardStats,
   BranchHours,
   BlockedSlot,
   BlockedSlotForm,
@@ -45,8 +46,15 @@ export const authApi = {
       { skipAuth: true },
     ),
 
+  forgotPassword: (email: string) =>
+    api.post<{ success: boolean; message: string }>("/auth/forgot-password", { email }, { skipAuth: true }),
+
+  resetPassword: (data: { token: string; password: string }) =>
+    api.post<{ success: boolean; message: string }>("/auth/reset-password", data, { skipAuth: true }),
+
   me: () => api.get<UserProfile>("/auth/me"),
 };
+
 
 // ============================================
 // Tenants endpoints
@@ -114,9 +122,16 @@ export const branchesApi = {
   createResource: (branchId: number, data: ResourceForm) =>
     api.post<Resource>(`/branches/${branchId}/resources`, data),
 
-  getBookings: (branchId: number, params?: { from?: string; to?: string }) => {
+  getBookings: (
+    branchId: number,
+    params?: { from?: string; to?: string; limit?: number },
+  ) => {
     const query = params
-      ? `?${new URLSearchParams(params as Record<string, string>).toString()}`
+      ? `?${new URLSearchParams(
+          Object.entries(params)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, String(v)]),
+        ).toString()}`
       : "";
     return api.get<Booking[]>(`/branches/${branchId}/bookings${query}`);
   },
@@ -144,7 +159,11 @@ export const branchesApi = {
 
   deleteBlockedSlot: (branchId: number, id: number) =>
     api.delete<void>(`/branches/${branchId}/blocked-slots/${id}`),
+
+  getDashboardStats: (branchId: number) =>
+    api.get<BranchDashboardStats>(`/branches/${branchId}/dashboard-stats`),
 };
+
 
 // ============================================
 // Sports endpoints
@@ -260,6 +279,14 @@ export const usersApi = {
 
   removeRole: (userId: number, roleId: number) =>
     api.delete<void>(`/users/${userId}/roles/${roleId}`),
+
+  createUser: (data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    branchId?: number;
+  }) => api.post<{ id: number; email: string; assignedRole: string }>("/users", data),
 };
 
 // ============================================

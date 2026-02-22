@@ -406,6 +406,19 @@ export interface TenantUser {
   }[];
 }
 
+export interface BranchDashboardStats {
+  stats: {
+    totalResources: number;
+    activeResources: number;
+    todayBookings: number;
+    pendingBookings: number;
+    monthlyBookings: number;
+    occupancyRate: number;
+  };
+  upcomingBookings: Booking[];
+  bookingsChart: { date: string; bookings: number; revenue: number }[];
+}
+
 export interface SuperAdminDashboardStats {
   stats: {
     totalTenants: number;

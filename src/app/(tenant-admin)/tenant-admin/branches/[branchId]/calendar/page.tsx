@@ -154,8 +154,8 @@ export default function TenantBranchCalendarPage() {
 
   const weekStart = weekDays[0];
   const weekEnd = weekDays[6];
-  const weekStartStr = weekStart.toISOString().split("T")[0];
-  const weekEndStr = weekEnd.toISOString().split("T")[0];
+  const weekStartStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+  const weekEndStr = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
 
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
@@ -270,14 +270,21 @@ export default function TenantBranchCalendarPage() {
   };
 
   const getBookingsForCell = (day: Date, slotStart: string) => {
-    const dateStr = day.toISOString().split("T")[0];
+    const [hours, minutes] = slotStart.split(":").map(Number);
+    const cellStart = new Date(day);
+    cellStart.setHours(hours, minutes, 0, 0);
+
+    const cellEnd = new Date(cellStart);
+    cellEnd.setMinutes(cellEnd.getMinutes() + 60);
+
     return bookings.filter(b => {
-      const bDate = new Date(b.startAt).toISOString().split('T')[0];
-      const bStart = new Date(b.startAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      
-      if (bDate !== dateStr || bStart !== slotStart) return false;
       if (selectedResource !== 'all' && b.resourceId !== parseInt(selectedResource)) return false;
       if (b.status === BookingStatus.CANCELLED || b.status === BookingStatus.REJECTED || b.status === BookingStatus.NO_SHOW) return false;
+      
+      const bStart = new Date(b.startAt);
+      const bEnd = new Date(b.endAt);
+
+      if (bStart >= cellEnd || bEnd <= cellStart) return false;
       
       return true;
     });

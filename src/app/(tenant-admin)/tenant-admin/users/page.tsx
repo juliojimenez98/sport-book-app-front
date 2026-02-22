@@ -62,6 +62,17 @@ export default function TenantUsersPage() {
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Create user dialog
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    branchId: "", // optional - if set → branch_admin, else → cliente
+  });
+  const [isCreating, setIsCreating] = useState(false);
+
   // Get tenant ID from current user's role
   const tenantRole = currentUser?.roles?.find((r) => {
     const roleName = r.roleName || r.role?.name;
@@ -196,6 +207,41 @@ export default function TenantUsersPage() {
     }
   };
 
+  const openCreateDialog = () => {
+    setCreateForm({ firstName: "", lastName: "", email: "", phone: "", branchId: "" });
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleCreateUser = async () => {
+    if (!createForm.firstName || !createForm.lastName || !createForm.email) return;
+    setIsCreating(true);
+    try {
+      await toast.promise(
+        usersApi.createUser({
+          firstName: createForm.firstName,
+          lastName: createForm.lastName,
+          email: createForm.email,
+          phone: createForm.phone || undefined,
+          branchId: createForm.branchId ? parseInt(createForm.branchId) : undefined,
+        }),
+        {
+          loading: "Creando usuario...",
+          success: (res) =>
+            createForm.branchId
+              ? `Usuario creado como branch-admin. Email enviado a ${res.email}.`
+              : `Usuario creado como cliente. Email enviado a ${res.email}.`,
+          error: "No se pudo crear el usuario",
+        },
+      );
+      setIsCreateDialogOpen(false);
+      loadUsers();
+    } catch {
+      // error already handled by toast.promise
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const getRoleBadgeVariant = (roleName: string) => {
     switch (roleName.toLowerCase()) {
       case "super_admin":
@@ -217,6 +263,7 @@ export default function TenantUsersPage() {
       tenant_admin: "Admin Centro",
       branch_admin: "Admin Sucursal",
       staff: "Staff",
+      cliente: "Cliente",
     };
     return names[roleName.toLowerCase()] || roleName.replace(/_/g, " ");
   };
@@ -254,6 +301,10 @@ export default function TenantUsersPage() {
             Gestiona el equipo de tu centro deportivo ({totalUsers} usuarios)
           </p>
         </div>
+        <Button onClick={openCreateDialog}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Agregar usuario
+        </Button>
       </div>
 
       {/* Search */}
@@ -565,6 +616,110 @@ export default function TenantUsersPage() {
               isLoading={isSubmitting}
             >
               Asignar rol
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Agregar usuario</DialogTitle>
+            <DialogDescription>
+              El usuario recibirá un correo con un enlace para configurar su contraseña.
+              {createForm.branchId
+                ? " Se le asignará el rol de Admin Sucursal."
+                : " Se le asignará el rol de Cliente."}
+            </DialogDescription>
+          </DialogHeader>
+
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-firstName">Nombre *</Label>
+                <Input
+                  id="create-firstName"
+                  placeholder="Juan"
+                  value={createForm.firstName}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, firstName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-lastName">Apellido *</Label>
+                <Input
+                  id="create-lastName"
+                  placeholder="Pérez"
+                  value={createForm.lastName}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, lastName: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-email">Email *</Label>
+              <Input
+                id="create-email"
+                type="email"
+                placeholder="usuario@ejemplo.com"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-phone">Teléfono (opcional)</Label>
+              <Input
+                id="create-phone"
+                type="tel"
+                placeholder="+56 9 1234 5678"
+                value={createForm.phone}
+                onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Asignar como Admin de Sucursal (opcional)</Label>
+              <Select
+                value={createForm.branchId}
+                onValueChange={(v) =>
+                  setCreateForm((f) => ({ ...f, branchId: v === "none" ? "" : v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin sucursal — será cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin sucursal (cliente)</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.branchId} value={branch.branchId.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <p className="text-xs text-muted-foreground">
+                {createForm.branchId
+                  ? "El usuario podrá gestionar esa sucursal."
+                  : "El usuario tendrá el rol de cliente para hacer reservas."}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCreateDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateUser}
+              disabled={!createForm.firstName || !createForm.lastName || !createForm.email}
+              isLoading={isCreating}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Crear usuario
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,7 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 import Link from "next/link";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useAuth } from "@/contexts";
+import { usersApi } from "@/lib/api";
+import { Booking } from "@/lib/types";
+
 import {
   Card,
   CardContent,
@@ -22,11 +29,27 @@ import { RoleName } from "@/lib/types";
 
 export default function DashboardPage() {
   const { user, isSuperAdmin, hasRole } = useAuth();
+  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
 
   // Check user roles for quick access links
   const isTenantAdmin = hasRole(RoleName.TENANT_ADMIN);
   const isBranchAdmin = hasRole(RoleName.BRANCH_ADMIN);
   const isStaff = hasRole(RoleName.STAFF);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const res = await usersApi.getMyBookings();
+        setRecentBookings(res.data.slice(0, 3)); // Solo mostrar las 3 más recientes
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+      } finally {
+        setIsLoadingBookings(false);
+      }
+    };
+    fetchBookings();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -134,20 +157,62 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Activity Placeholder */}
+      {/* Recent Activity */}
       <Card>
-        <CardHeader>
-          <CardTitle>Actividad reciente</CardTitle>
-          <CardDescription>Tus últimas reservas y actividades</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Actividad reciente</CardTitle>
+            <CardDescription>Tus últimas reservas y actividades</CardDescription>
+          </div>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/bookings">Ver todas</Link>
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <CalendarDays className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No tienes reservas recientes</p>
-            <Button asChild className="mt-4">
-              <Link href="/browse">Hacer tu primera reserva</Link>
-            </Button>
-          </div>
+          {isLoadingBookings ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>Cargando reservas...</p>
+            </div>
+          ) : recentBookings.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <CalendarDays className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No tienes reservas recientes</p>
+              <Button asChild className="mt-4">
+                <Link href="/browse">Hacer tu primera reserva</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {recentBookings.map((booking) => (
+                <div key={booking.bookingId} className="flex items-center gap-4 p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {booking.resource?.name || "Cancha"} - {booking.resource?.branch?.name || "Sucursal"}
+                    </p>
+                    <div className="flex items-center text-xs text-muted-foreground mt-1 space-x-2">
+                      <span className="flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" />
+                        {format(new Date(booking.startAt), "dd MMM yyyy", { locale: es })}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {format(new Date(booking.startAt), "HH:mm")} - {format(new Date(booking.endAt), "HH:mm")}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="hidden sm:block">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize bg-primary/10 text-primary">
+                      {booking.status.toLowerCase()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

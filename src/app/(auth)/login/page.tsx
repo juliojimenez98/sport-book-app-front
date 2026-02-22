@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarDays, Eye, EyeOff } from "lucide-react";
+import { CalendarDays, Eye, EyeOff, Mail } from "lucide-react";
 import { useAuth } from "@/contexts";
 import {
   Button,
@@ -27,11 +27,20 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+// Keywords that indicate an unverified-email 401
+const UNVERIFIED_KEYWORDS = ["verificar", "verifica", "verified", "verify"];
+
+function isUnverifiedEmailError(message: string) {
+  const lower = message.toLowerCase();
+  return UNVERIFIED_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const {
     register,
@@ -42,14 +51,51 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    setUnverifiedEmail(null);
     setIsLoading(true);
-    const success = await login(data);
-    setIsLoading(false);
-
-    if (success) {
-      router.push("/dashboard");
+    try {
+      const success = await login(data);
+      if (success) {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : String(err);
+      if (isUnverifiedEmailError(message)) {
+        setUnverifiedEmail(data.email);
+      }
+      // Generic errors are already handled by the toast inside AuthContext
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // ── Unverified email banner ──────────────────────────────────────────────────
+  const UnverifiedBanner = unverifiedEmail ? (
+    <div
+      style={{
+        background: "#fffbeb",
+        border: "1px solid #fcd34d",
+        borderRadius: 10,
+        padding: "14px 16px",
+        display: "flex",
+        gap: 12,
+        alignItems: "flex-start",
+      }}
+    >
+      <Mail className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: "#d97706" }} />
+      <div>
+        <p style={{ margin: "0 0 4px", fontWeight: 600, fontSize: 14, color: "#92400e" }}>
+          Email pendiente de verificación
+        </p>
+        <p style={{ margin: 0, fontSize: 13, color: "#78350f", lineHeight: 1.5 }}>
+          Enviamos un link de activación a{" "}
+          <strong>{unverifiedEmail}</strong>. Haz clic en ese link para
+          activar tu cuenta y poder iniciar sesión.
+        </p>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <Card className="border-0 shadow-xl">
@@ -65,6 +111,9 @@ export default function LoginPage() {
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
+          {/* Unverified email banner */}
+          {UnverifiedBanner}
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

@@ -142,8 +142,8 @@ export default function BranchCalendarPage() {
 
   const weekStart = weekDays[0];
   const weekEnd = weekDays[6];
-  const weekStartStr = weekStart.toISOString().split("T")[0];
-  const weekEndStr = weekEnd.toISOString().split("T")[0];
+  const weekStartStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+  const weekEndStr = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
 
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
@@ -158,6 +158,7 @@ export default function BranchCalendarPage() {
           branchesApi.getBookings(branchId, {
             from: weekStartStr,
             to: weekEndStr,
+            limit: 1000,
           }),
           branchesApi.getBlockedSlots(branchId, {
             from: weekStartStr,
@@ -257,30 +258,43 @@ export default function BranchCalendarPage() {
   };
 
   const getBookingsForCell = (day: Date, slotStart: string) => {
-    const dateStr = day.toISOString().split("T")[0];
+    // Construir datetime local para la celda (inicio y fin suponiendo bloques de 60m)
+    const [hours, minutes] = slotStart.split(":").map(Number);
+    const cellStart = new Date(day);
+    cellStart.setHours(hours, minutes, 0, 0);
+
+    const cellEnd = new Date(cellStart);
+    // Intervalo de 60 minutos como se genera en timeSlots
+    cellEnd.setMinutes(cellEnd.getMinutes() + 60);
+
     return bookings.filter((b) => {
-      const bDate = new Date(b.startAt).toISOString().split("T")[0];
-      const bStart = new Date(b.startAt).toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      if (bDate !== dateStr || bStart !== slotStart) return false;
+      // Filtrado por recurso
       if (
         selectedResource !== "all" &&
         b.resourceId !== parseInt(selectedResource)
       )
         return false;
+
+      // Ocultar reservas canceladas, no presentadas o rechazadas
       if (
         b.status === BookingStatus.CANCELLED ||
-        b.status === BookingStatus.NO_SHOW
+        b.status === BookingStatus.NO_SHOW ||
+        b.status === BookingStatus.REJECTED
       )
         return false;
+
+      // Validación robusta de solapamiento en timestamps absolutos
+      const bStart = new Date(b.startAt);
+      const bEnd = new Date(b.endAt);
+
+      if (bStart >= cellEnd || bEnd <= cellStart) return false;
+
       return true;
     });
   };
 
   const getBlockedForCell = (day: Date, slotStart: string) => {
-    const dateStr = day.toISOString().split("T")[0];
+    const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
     return blockedSlots.filter((bs) => {
       if (bs.date !== dateStr) return false;
       if (slotStart < bs.startTime || slotStart >= bs.endTime) return false;
