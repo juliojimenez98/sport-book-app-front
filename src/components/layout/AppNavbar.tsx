@@ -36,7 +36,7 @@ export function AppNavbar() {
         <Link href="/dashboard" className="flex items-center gap-2">
           <CalendarDays className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold gradient-text hidden sm:inline">
-            BookingPro
+            Easy Sport Book
           </span>
         </Link>
 

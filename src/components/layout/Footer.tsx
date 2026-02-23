@@ -11,7 +11,7 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-2">
               <CalendarDays className="h-8 w-8 text-primary" />
               <span className="text-xl font-bold gradient-text">
-                BookingPro
+                Easy Sport Book
               </span>
             </Link>
             <p className="text-sm text-muted-foreground">
@@ -114,7 +114,7 @@ export function Footer() {
 
         <div className="border-t mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} BookingPro. Todos los derechos
+            © {new Date().getFullYear()} Easy Sport Book. Todos los derechos
             reservados.
           </p>
           <div className="flex items-center gap-4">

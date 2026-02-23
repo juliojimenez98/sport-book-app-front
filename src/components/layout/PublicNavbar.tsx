@@ -17,7 +17,7 @@ export function PublicNavbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <CalendarDays className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold gradient-text">BookingPro</span>
+          <span className="text-xl font-bold gradient-text">Easy Sport Book</span>
         </Link>
 
         {/* Desktop Navigation */}

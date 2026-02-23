@@ -59,7 +59,7 @@ function VerifyEmailContent() {
         <Link href="/" className="inline-flex items-center gap-2 justify-center">
           <CalendarDays className="h-8 w-8 text-white" />
           <span style={{ color: "#fff", fontSize: 22, fontWeight: 700 }}>
-            BookingPro
+            Easy Sport Book
           </span>
         </Link>
       </div>
@@ -189,7 +189,7 @@ function VerifyEmailContent() {
         className="px-8 py-5 text-center"
       >
         <p style={{ color: "#94a3b8", fontSize: 12 }}>
-          © {new Date().getFullYear()} BookingPro · Todos los derechos reservados
+          © {new Date().getFullYear()} Easy Sport Book · Todos los derechos reservados
         </p>
       </div>
     </div>

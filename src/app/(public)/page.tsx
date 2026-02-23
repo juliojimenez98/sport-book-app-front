@@ -233,7 +233,7 @@ export default function HomePage() {
                   ¿Tienes un centro deportivo?
                 </h2>
                 <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-                  Únete a BookingPro y digitaliza tu negocio. Más reservas,
+                  Únete a Easy Sport Book y digitaliza tu negocio. Más reservas,
                   menos trabajo administrativo.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4 mb-8">

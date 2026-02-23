@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BookingPro - Reserva canchas deportivas",
+  title: "Easy Sport Book - Reserva canchas deportivas",
   description:
     "La plataforma líder en reservas de canchas deportivas. Reserva fácil, juega más.",
 };

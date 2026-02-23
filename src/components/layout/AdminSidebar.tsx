@@ -70,7 +70,7 @@ export function AdminSidebar({
               <Link href="/" className="flex items-center gap-2">
                 <CalendarDays className="h-8 w-8 text-primary" />
                 <span className="text-lg font-bold gradient-text">
-                  BookingPro
+                  Easy Sport Book
                 </span>
               </Link>
               {/* Mobile Close Button */}

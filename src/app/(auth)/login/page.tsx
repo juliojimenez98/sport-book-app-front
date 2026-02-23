@@ -102,7 +102,7 @@ export default function LoginPage() {
       <CardHeader className="text-center">
         <Link href="/" className="flex items-center justify-center gap-2 mb-4">
           <CalendarDays className="h-10 w-10 text-primary" />
-          <span className="text-2xl font-bold gradient-text">BookingPro</span>
+          <span className="text-2xl font-bold gradient-text">Easy Sport Book</span>
         </Link>
         <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
         <CardDescription>

@@ -49,7 +49,7 @@ export function ImageGallery({ images, alt = "Image", fallbackIcon, hideThumbnai
     <div className="flex flex-col gap-2 w-full h-full">
       {/* Main Image View */}
       <div
-        className="relative w-full h-full min-h-[160px] bg-muted overflow-hidden group cursor-pointer"
+        className="relative w-full h-full bg-muted overflow-hidden group cursor-pointer"
         onClick={openMainImage}
       >
         <img
