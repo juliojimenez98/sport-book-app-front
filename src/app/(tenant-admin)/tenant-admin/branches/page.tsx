@@ -41,9 +41,12 @@ import {
   CalendarDays,
   ClipboardCheck,
 } from "lucide-react";
-import { Branch, BranchForm, RoleName, RoleScope, Region, Comuna } from "@/lib/types";
+import { Branch, BranchForm, RoleName, RoleScope, Region, Comuna, UserRole } from "@/lib/types";
 import { publicApi, branchesApi, tenantsApi } from "@/lib/api";
-import { useAuth } from "@/contexts";
+import { useAuth } from "@/contexts/AuthContext";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { getAssetUrl } from "@/lib/api/endpoints";
+import { ImageGallery } from "@/components/ui/image-gallery";
 
 export default function TenantBranchesPage() {
   const { user: currentUser } = useAuth();
@@ -67,6 +70,7 @@ export default function TenantBranchesPage() {
     hasCafeteria: false,
     hasEquipmentRental: false,
     amenitiesDescription: "",
+    images: [],
   });
 
   // Edit dialog state
@@ -145,6 +149,7 @@ export default function TenantBranchesPage() {
       hasEquipmentRental: branch.hasEquipmentRental || false,
       amenitiesDescription: branch.amenitiesDescription || "",
       requiresApproval: branch.requiresApproval || false,
+      images: branch.images?.map((img) => img.imageUrl) || [],
     });
     setIsEditDialogOpen(true);
   };
@@ -207,7 +212,7 @@ export default function TenantBranchesPage() {
   };
 
   // Get tenant ID from current user's role
-  const tenantRole = currentUser?.roles?.find((r) => {
+  const tenantRole = currentUser?.roles?.find((r: UserRole) => {
     const roleName = r.roleName || r.role?.name;
     return (
       roleName === RoleName.TENANT_ADMIN &&
@@ -233,6 +238,7 @@ export default function TenantBranchesPage() {
       hasEquipmentRental: false,
       amenitiesDescription: "",
       requiresApproval: false,
+      images: [],
     });
     setIsCreateDialogOpen(true);
   };
@@ -334,9 +340,15 @@ export default function TenantBranchesPage() {
               className={`overflow-hidden ${!branch.isActive ? "opacity-60 border-destructive/40" : ""}`}
             >
               <div
-                className={`h-32 flex items-center justify-center ${branch.isActive ? "bg-linear-to-br from-primary/20 to-accent/20" : "bg-muted"}`}
+                className={`h-32 relative flex items-center justify-center ${branch.isActive ? "" : "opacity-60"}`}
               >
-                <Building2 className="h-12 w-12 text-primary/50" />
+                  <ImageGallery 
+                    images={branch.images?.map(i => getAssetUrl(i.imageUrl)) || []} 
+                    alt={branch.name} 
+                    hideThumbnails 
+                    hideOverlay 
+                    fallbackIcon={<div className={`absolute inset-0 flex items-center justify-center ${branch.isActive ? "bg-linear-to-br from-primary/20 to-accent/20" : "bg-muted"}`}><Building2 className="h-12 w-12 text-primary/50" /></div>}
+                  />
               </div>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
@@ -481,6 +493,43 @@ export default function TenantBranchesPage() {
               <h3 className="font-medium text-sm text-muted-foreground">
                 Información básica
               </h3>
+
+              <div className="space-y-4 mb-4 lg:col-span-2">
+                 <Label>Galería de Fotos (Recomendado 16:9)</Label>
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {(formData.images || []).map((imgUrl, index) => (
+                      <div key={index} className="relative aspect-video">
+                         <ImageUpload
+                           value={imgUrl}
+                           onChange={(newUrl) => {
+                             const updated = [...(formData.images || [])];
+                             if (newUrl) {
+                               updated[index] = newUrl;
+                             } else {
+                               updated.splice(index, 1);
+                             }
+                             setFormData({ ...formData, images: updated });
+                           }}
+                           folder="branches"
+                           className="h-full border-muted/50"
+                         />
+                      </div>
+                    ))}
+                    <div className="relative aspect-video">
+                       <ImageUpload
+                         onChange={(newUrl) => {
+                           if (newUrl) {
+                             const current = formData.images || [];
+                             setFormData({ ...formData, images: [...current, newUrl] });
+                           }
+                         }}
+                         folder="branches"
+                         className="h-full border-dashed"
+                       />
+                    </div>
+                 </div>
+                 <p className="text-xs text-muted-foreground">La primera imagen se utilizará como portada o miniatura principal.</p>
+              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -733,6 +782,43 @@ export default function TenantBranchesPage() {
               <h3 className="font-medium text-sm text-muted-foreground">
                 Información básica
               </h3>
+
+              <div className="space-y-4 mb-4 lg:col-span-2">
+                 <Label>Galería de Fotos (Recomendado 16:9)</Label>
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {(createFormData.images || []).map((imgUrl, index) => (
+                      <div key={index} className="relative aspect-video">
+                         <ImageUpload
+                           value={imgUrl}
+                           onChange={(newUrl) => {
+                             const updated = [...(createFormData.images || [])];
+                             if (newUrl) {
+                               updated[index] = newUrl;
+                             } else {
+                               updated.splice(index, 1);
+                             }
+                             setCreateFormData({ ...createFormData, images: updated });
+                           }}
+                           folder="branches"
+                           className="h-full border-muted/50"
+                         />
+                      </div>
+                    ))}
+                    <div className="relative aspect-video">
+                       <ImageUpload
+                         onChange={(newUrl) => {
+                           if (newUrl) {
+                             const current = createFormData.images || [];
+                             setCreateFormData({ ...createFormData, images: [...current, newUrl] });
+                           }
+                         }}
+                         folder="branches"
+                         className="h-full border-dashed"
+                       />
+                    </div>
+                 </div>
+                 <p className="text-xs text-muted-foreground">La primera imagen se utilizará como portada o miniatura principal.</p>
+              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">

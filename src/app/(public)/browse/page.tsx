@@ -29,8 +29,9 @@ import {
   X,
   Filter,
 } from "lucide-react";
-import { publicApi } from "@/lib/api";
+import { publicApi, getAssetUrl } from "@/lib/api/endpoints";
 import { Branch, Sport, Region } from "@/lib/types";
+import { ImageGallery } from "@/components/ui/image-gallery";
 
 // Amenities configuration
 const AMENITIES = [
@@ -268,7 +269,17 @@ export default function BrowsePage() {
                     className="block group/card"
                   >
                     <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50">
-                      <CardHeader className="pb-2">
+                        <div className="h-32 w-full relative bg-muted rounded-t-lg">
+                           <ImageGallery 
+                              images={branch.images?.map(i => getAssetUrl(i.imageUrl)) || []} 
+                              alt={branch.name} 
+                              hideThumbnails 
+                              hideOverlay 
+                              fallbackIcon={<Building2 className="h-10 w-10 text-primary/50" />}
+                           />
+                        </div>
+                      
+                      <CardHeader className="pb-2 pt-4">
                         <div className="flex items-start justify-between">
                           <div>
                             <CardTitle className="text-lg group-hover/card:text-primary transition-colors">
@@ -280,13 +291,13 @@ export default function BrowsePage() {
                               </p>
                             )}
                             {branch.address && (
-                              <CardDescription className="flex items-start gap-1 mt-1">
+                              <CardDescription className="flex items-start gap-1 mt-1 shrink-0 max-w-xs">
                                 <MapPin className="h-3 w-3 mt-1 shrink-0" />
-                                {branch.address}
+                                <span className="truncate" title={branch.address}>{branch.address}</span>
                               </CardDescription>
                             )}
                           </div>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover/card:text-primary group-hover/card:translate-x-1 transition-all shrink-0" />
+                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover/card:text-primary group-hover/card:translate-x-1 transition-all shrink-0 ml-2 mt-1" />
                         </div>
                       </CardHeader>
                       <CardContent>

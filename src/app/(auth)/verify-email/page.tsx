@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CalendarDays, CheckCircle, XCircle, Loader2 } from "lucide-react";
@@ -10,7 +10,7 @@ type State = "loading" | "success" | "already_verified" | "error";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [state, setState] = useState<State>("loading");
@@ -193,5 +193,13 @@ export default function VerifyEmailPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

@@ -33,6 +33,13 @@ export enum RoleScope {
 }
 
 // Base entities
+export interface TenantImage {
+  tenantImageId: number;
+  tenantId: number;
+  imageUrl: string;
+  isPrimary: boolean;
+}
+
 export interface Tenant {
   tenantId: number;
   name: string;
@@ -40,12 +47,20 @@ export interface Tenant {
   email: string;
   phone?: string;
   logoUrl?: string;
+  images?: TenantImage[];
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BranchImage {
+  branchImageId: number;
+  branchId: number;
+  imageUrl: string;
+  isPrimary: boolean;
 }
 
 export interface Branch {
@@ -56,6 +71,7 @@ export interface Branch {
   address?: string;
   phone?: string;
   email?: string;
+  images?: BranchImage[];
   timezone: string;
   // Location
   regionId?: string;
@@ -112,6 +128,13 @@ export interface BranchSport {
   sport?: Sport;
 }
 
+export interface ResourceImage {
+  resourceImageId: number;
+  resourceId: number;
+  imageUrl: string;
+  isPrimary: boolean;
+}
+
 export interface Resource {
   resourceId: number;
   branchId: number;
@@ -126,6 +149,7 @@ export interface Resource {
   updatedAt: string;
   branch?: Branch;
   sport?: Sport;
+  images?: ResourceImage[];
   // Extended fields
   imageUrl?: string;
   openTime?: string;
@@ -340,6 +364,7 @@ export interface BranchForm {
   address?: string;
   phone?: string;
   email?: string;
+  images?: string[];
   timezone?: string;
   isActive?: boolean;
   // Location
@@ -361,6 +386,7 @@ export interface ResourceForm {
   name: string;
   sportId: number;
   description?: string;
+  images?: string[];
   pricePerHour: number;
   currency: string;
   slotMinutes: number;

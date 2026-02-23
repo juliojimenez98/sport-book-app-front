@@ -39,6 +39,8 @@ import {
 import { tenantsApi } from "@/lib/api";
 import { Tenant, TenantForm } from "@/lib/types";
 import { formatDate, slugify } from "@/lib/utils";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { getAssetUrl } from "@/lib/api/endpoints";
 
 const tenantSchema = z.object({
   name: z.string().min(2, "Mínimo 2 caracteres"),
@@ -48,10 +50,12 @@ const tenantSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
   email: z.string().email("Email inválido"),
   phone: z.string().optional(),
+  logoUrl: z.string().optional(),
   isActive: z.boolean().optional(),
   primaryColor: z.string().optional(),
   secondaryColor: z.string().optional(),
   accentColor: z.string().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 type TenantFormData = z.infer<typeof tenantSchema>;
@@ -91,6 +95,7 @@ export default function TenantsPage() {
   });
 
   const nameValue = watch("name");
+  const logoUrlValue = watch("logoUrl");
 
   useEffect(() => {
     loadTenants();
@@ -121,7 +126,7 @@ export default function TenantsPage() {
 
   const openCreateDialog = () => {
     setEditingTenant(null);
-    reset({ name: "", slug: "", email: "", phone: "" });
+    reset({ name: "", slug: "", email: "", phone: "", logoUrl: "", images: [] });
     setIsActiveValue(true);
     setPrimaryColor(DEFAULT_COLORS.primary);
     setSecondaryColor(DEFAULT_COLORS.secondary);
@@ -136,6 +141,8 @@ export default function TenantsPage() {
       slug: tenant.slug,
       email: tenant.email,
       phone: tenant.phone || "",
+      logoUrl: tenant.logoUrl || "",
+      images: tenant.images?.map((img) => img.imageUrl) || [],
     });
     setIsActiveValue(tenant.isActive);
     setPrimaryColor(tenant.primaryColor || DEFAULT_COLORS.primary);
@@ -256,19 +263,29 @@ export default function TenantsPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div
-                      className="h-12 w-12 rounded-lg flex items-center justify-center"
-                      style={{
-                        backgroundColor: `${tenant.primaryColor || DEFAULT_COLORS.primary}20`,
-                      }}
-                    >
-                      <Building2
-                        className="h-6 w-6"
+                    {tenant.logoUrl || (tenant.images && tenant.images.length > 0) ? (
+                      <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden relative bg-muted flex items-center justify-center">
+                        <img 
+                          src={getAssetUrl(tenant.logoUrl || tenant.images?.[0]?.imageUrl || "")}
+                          alt={tenant.name || "Tenant Logo"}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="h-12 w-12 shrink-0 rounded-lg flex items-center justify-center"
                         style={{
-                          color: tenant.primaryColor || DEFAULT_COLORS.primary,
+                          backgroundColor: `${tenant.primaryColor || DEFAULT_COLORS.primary}20`,
                         }}
-                      />
-                    </div>
+                      >
+                        <Building2
+                          className="h-6 w-6"
+                          style={{
+                            color: tenant.primaryColor || DEFAULT_COLORS.primary,
+                          }}
+                        />
+                      </div>
+                    )}
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-lg">{tenant.name}</h3>
@@ -380,6 +397,52 @@ export default function TenantsPage() {
                 error={errors.name?.message}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Logo del Centro (1:1 Recomendado)</Label>
+              <ImageUpload
+                value={logoUrlValue}
+                onChange={(url) => setValue("logoUrl", url, { shouldValidate: true })}
+                folder="tenants"
+                className="h-32 mb-2"
+              />
+            </div>
+            
+            <div className="space-y-4">
+              <Label>Galería del Centro Deportivo (Opcional, 16:9 Recomendado)</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {(watch("images") || []).map((imgUrl, index) => (
+                  <div key={index} className="relative aspect-video">
+                    <ImageUpload
+                      value={imgUrl}
+                      onChange={(newUrl) => {
+                        const updated = [...(watch("images") || [])];
+                        if (newUrl) {
+                          updated[index] = newUrl;
+                        } else {
+                          updated.splice(index, 1);
+                        }
+                        setValue("images", updated, { shouldValidate: true });
+                      }}
+                      folder="tenants"
+                      className="h-full border-muted/50"
+                    />
+                  </div>
+                ))}
+                <div className="relative aspect-video">
+                  <ImageUpload
+                    onChange={(newUrl) => {
+                      if (newUrl) {
+                        const current = watch("images") || [];
+                        setValue("images", [...current, newUrl], { shouldValidate: true });
+                      }
+                    }}
+                    folder="tenants"
+                    className="h-full border-dashed"
+                  />
+                </div>
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="slug">Slug (URL)</Label>
               <Input

@@ -30,6 +30,8 @@ import {
 import { publicApi } from "@/lib/api";
 import { Tenant, Branch } from "@/lib/types";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
+import { getAssetUrl } from "@/lib/api/endpoints";
+import { ImageGallery } from "@/components/ui/image-gallery";
 
 // Amenities configuration
 const AMENITIES = [
@@ -128,11 +130,13 @@ export default function TenantPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             {tenant.logoUrl && (
-              <img
-                src={tenant.logoUrl}
-                alt={tenant.name}
-                className="h-20 mx-auto mb-6"
-              />
+              <div className="h-20 w-20 mx-auto mb-6 rounded-lg overflow-hidden relative shadow-sm">
+                <img
+                  src={getAssetUrl(tenant.logoUrl)}
+                  alt={tenant.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
             )}
             <h1 className="text-4xl sm:text-5xl font-bold mb-4">
               {tenant.name}
@@ -188,8 +192,17 @@ export default function TenantPage() {
                       href={`/${tenantSlug}/${branch.slug}`}
                       className="block group"
                     >
-                      <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50">
-                        <CardHeader className="pb-2">
+                      <Card className="h-full hover:shadow-lg transition-all hover:border-primary/50 overflow-hidden flex flex-col">
+                        <div className="h-40 relative bg-muted flex items-center justify-center shrink-0">
+                          <ImageGallery 
+                            images={branch.images?.map(i => getAssetUrl(i.imageUrl)) || []} 
+                            alt={branch.name} 
+                            hideThumbnails 
+                            hideOverlay 
+                            fallbackIcon={<Building2 className="h-10 w-10 text-primary/50" />}
+                          />
+                        </div>
+                        <CardHeader className="pb-2 flex-none">
                           <div className="flex items-start justify-between">
                             <div>
                               <CardTitle className="text-lg group-hover:text-primary transition-colors">

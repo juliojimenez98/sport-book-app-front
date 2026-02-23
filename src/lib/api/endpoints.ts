@@ -326,3 +326,35 @@ export const publicApi = {
   getResource: (id: number | string) =>
     api.get<Resource>(`/public/resources/${id}`, { skipAuth: true }),
 };
+
+// ============================================
+// Upload endpoints
+// ============================================
+
+export const uploadApi = {
+  uploadImage: (file: File, folder: string = "general") => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.post<{ key: string }>(`/upload/image?folder=${folder}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+};
+
+/**
+ * Convenience utility to quickly build the proxy GET url to an s3 object key
+ * Automatically bridges it to the environment API URL.
+ */
+export const getAssetUrl = (key: string | null | undefined): string => {
+  if (!key) return "";
+  // If the key is already a full URL (e.g. from previous mock seeds), return it
+  if (key.startsWith("http://") || key.startsWith("https://") || key.startsWith("/")) {
+    return key;
+  }
+  
+  // Return the configured backend endpoint passing the `key`
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+  return `${baseUrl}/public/assets?key=${key}`;
+};

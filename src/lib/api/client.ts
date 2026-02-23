@@ -256,6 +256,7 @@ function extractData<T>(responseData: unknown): T {
 export interface RequestConfig {
   skipAuth?: boolean;
   params?: Record<string, unknown>;
+  headers?: Record<string, string>;
 }
 
 // ============================================
@@ -278,6 +279,7 @@ export const api = {
   ): Promise<T> => {
     const response = await axiosInstance.post(endpoint, data ?? undefined, {
       skipAuth: config?.skipAuth,
+      headers: config?.headers,
     } as CustomAxiosConfig);
     return extractData<T>(response.data);
   },

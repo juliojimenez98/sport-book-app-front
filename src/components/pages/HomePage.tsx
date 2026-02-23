@@ -23,7 +23,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { Footer } from "@/components/layout/Footer";
-import { publicApi } from "@/lib/api";
+import { publicApi, getAssetUrl } from "@/lib/api/endpoints";
 import { Tenant } from "@/lib/types";
 
 const features = [
@@ -220,7 +220,7 @@ export default function HomePage() {
                             <div className="flex items-center gap-3">
                               {tenant.logoUrl ? (
                                 <img
-                                  src={tenant.logoUrl}
+                                  src={getAssetUrl(tenant.logoUrl)}
                                   alt={tenant.name}
                                   className="h-10 w-10 rounded-lg object-contain"
                                 />

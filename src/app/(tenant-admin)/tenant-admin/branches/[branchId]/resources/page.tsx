@@ -41,6 +41,8 @@ import {
 import { branchesApi, resourcesApi, sportsApi } from "@/lib/api";
 import { Resource, Sport, Branch, ResourceForm } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { getAssetUrl } from "@/lib/api/endpoints";
 
 export default function TenantBranchResourcesPage() {
   const params = useParams();
@@ -67,6 +69,7 @@ export default function TenantBranchResourcesPage() {
     pricePerHour: 0,
     currency: "CLP",
     slotMinutes: 60,
+    images: [],
   });
 
   const loadData = useCallback(async () => {
@@ -105,6 +108,7 @@ export default function TenantBranchResourcesPage() {
       pricePerHour: 15000,
       currency: "CLP",
       slotMinutes: 60,
+      images: [],
     });
     setIsDialogOpen(true);
   };
@@ -118,6 +122,7 @@ export default function TenantBranchResourcesPage() {
       pricePerHour: resource.pricePerHour,
       currency: resource.currency || "CLP",
       slotMinutes: resource.slotMinutes,
+      images: resource.images?.map((img) => img.imageUrl) || [],
     });
     setIsDialogOpen(true);
   };
@@ -246,8 +251,28 @@ export default function TenantBranchResourcesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {resources.map((resource) => (
-            <Card key={resource.resourceId}>
-              <CardHeader className="pb-2">
+            <Card key={resource.resourceId} className="overflow-hidden">
+              <div className="h-40 relative bg-muted flex items-center justify-center">
+                  {resource.images && resource.images.length > 0 ? (
+                    <img
+                      src={getAssetUrl(resource.images[0].imageUrl)}
+                      alt={resource.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-primary/20 to-accent/20">
+                      <span className="text-4xl text-primary/50">
+                        {resource.sport?.name === "Fútbol" && "⚽"}
+                        {resource.sport?.name === "Tenis" && "🎾"}
+                        {resource.sport?.name === "Pádel" && "🏸"}
+                        {resource.sport?.name === "Básquetbol" && "🏀"}
+                        {resource.sport?.name === "Voleibol" && "🏐"}
+                        {!resource.sport?.name && "🏟️"}
+                      </span>
+                    </div>
+                  )}
+              </div>
+              <CardHeader className="pb-2 pt-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-lg">{resource.name}</CardTitle>
@@ -317,6 +342,42 @@ export default function TenantBranchResourcesPage() {
           </DialogHeader>
 
           <div className="space-y-4">
+            <div className="space-y-4">
+              <Label>Galería de la Cancha (Opcional, 16:9 Recomendado)</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {(formData.images || []).map((imgUrl, index) => (
+                  <div key={index} className="relative aspect-video">
+                    <ImageUpload
+                      value={imgUrl}
+                      onChange={(newUrl) => {
+                        const updated = [...(formData.images || [])];
+                        if (newUrl) {
+                          updated[index] = newUrl;
+                        } else {
+                          updated.splice(index, 1);
+                        }
+                        setFormData({ ...formData, images: updated });
+                      }}
+                      folder="resources"
+                      className="h-full border-muted/50"
+                    />
+                  </div>
+                ))}
+                <div className="relative aspect-video">
+                  <ImageUpload
+                    onChange={(newUrl) => {
+                      if (newUrl) {
+                        const current = formData.images || [];
+                        setFormData({ ...formData, images: [...current, newUrl] });
+                      }
+                    }}
+                    folder="resources"
+                    className="h-full border-dashed"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="res-name">Nombre *</Label>
               <Input

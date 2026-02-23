@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -38,11 +38,13 @@ import {
   bookingsApi,
   resourcesApi,
   branchesApi,
+  getAssetUrl
 } from "@/lib/api/endpoints";
 import { Resource, BranchHours, CalendarBooking, CalendarBlockedSlot } from "@/lib/types";
 import { formatCurrency, formatDate, cn, generateTimeSlots } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
+import { ImageGallery } from "@/components/ui/image-gallery";
 
 // Amenities configuration
 const AMENITIES = [
@@ -70,19 +72,61 @@ export default function ResourceDetailPage() {
   const [resource, setResource] = useState<Resource | null>(null);
   const [branchHours, setBranchHours] = useState<BranchHours[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
-  const [pendingBookingSlots, setPendingBookingSlots] = useState<string[]>([]);
-  const [blockedSlotsList, setBlockedSlotsList] = useState<
-    CalendarBlockedSlot[]
-  >([]);
+  const [currentWeekDate, setCurrentWeekDate] = useState(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
+  
+  // Selected slot is now an object with date (YYYY-MM-DD) and time (HH:MM)
+  const [selectedSlot, setSelectedSlot] = useState<{date: string, time: string, pendingId?: number} | null>(null);
+  
+  // Changed to store arrays of { date, time } objects
+  const [bookedSlots, setBookedSlots] = useState<{date: string, time: string}[]>([]);
+  const [pendingBookingSlots, setPendingBookingSlots] = useState<{date: string, time: string, id: number}[]>([]);
+  const [blockedSlotsList, setBlockedSlotsList] = useState<CalendarBlockedSlot[]>([]);
+  
   const [booking, setBooking] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState<{
-    status: string;
-  } | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState<{ status: string } | null>(null);
 
-  // Get branch hours for selected date
+  const bookingSectionRef = useRef<HTMLDivElement>(null);
+
+  // Get week days based on currentWeekDate
+  const weekDays = (() => {
+    const startOfWeek = new Date(currentWeekDate);
+    const day = startOfWeek.getDay();
+    // Adjust to Monday (1)
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); 
+    startOfWeek.setDate(diff);
+    
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  })();
+
+  // Helper to get local date string YYYY-MM-DD reliably
+  const getLocalDateString = (d: Date) => {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const weekStartStr = getLocalDateString(weekDays[0]);
+  const weekEndStr = getLocalDateString(weekDays[6]);
+
+  // Compute dynamic Y-axis time slots based on branch hours across the week
+  const gridTimeSlots = (() => {
+    if (branchHours.length === 0) return generateTimeSlots(7, 23, resource?.slotMinutes || 60);
+    const openDays = branchHours.filter(h => !h.isClosed);
+    if (openDays.length === 0) return generateTimeSlots(7, 23, resource?.slotMinutes || 60);
+    
+    const earliestOpen = openDays.reduce((min, h) => h.openTime < min ? h.openTime : min, openDays[0].openTime);
+    const latestClose = openDays.reduce((max, h) => h.closeTime > max ? h.closeTime : max, openDays[0].closeTime);
+    
+    return generateTimeSlots(earliestOpen, latestClose, resource?.slotMinutes || 60);
+  })();
+
+  // Get branch hours for a specific week day
   const getHoursForDate = useCallback(
     (date: Date) => {
       const dayOfWeek = date.getDay();
@@ -91,25 +135,16 @@ export default function ResourceDetailPage() {
     [branchHours],
   );
 
-  // Check if the selected day is closed
+  // Check if a specific day is closed
   const isDayClosed = useCallback(
     (date: Date) => {
       const hours = getHoursForDate(date);
-      return hours?.isClosed ?? false;
+      // If no hours are defined, treat as open to prevent blocking if not configured
+      if (!hours) return false;
+      return hours.isClosed;
     },
     [getHoursForDate],
   );
-
-  // Generate time slots based on branch hours for the selected date
-  const timeSlots = (() => {
-    const hours = getHoursForDate(selectedDate);
-    if (!hours || hours.isClosed) return [];
-    return generateTimeSlots(
-      hours.openTime,
-      hours.closeTime,
-      resource?.slotMinutes || 60,
-    );
-  })();
 
   useEffect(() => {
     fetchResource();
@@ -120,7 +155,7 @@ export default function ResourceDetailPage() {
     if (resource) {
       fetchCalendarData();
     }
-  }, [resource, selectedDate]);
+  }, [resource, currentWeekDate, user]);
 
   const fetchResource = async () => {
     try {
@@ -154,40 +189,39 @@ export default function ResourceDetailPage() {
   const fetchCalendarData = async () => {
     if (!resource) return;
     try {
-      const dateStr = selectedDate.toISOString().split("T")[0];
       const calendarData = await resourcesApi.getCalendar(
         resource.resourceId,
-        dateStr,
-        dateStr,
+        weekStartStr,
+        weekEndStr,
       );
 
-      // Map bookings to booked start times, separating confirmed and user's pending
       const bookings = calendarData.bookings || [];
-      const confirmed: string[] = [];
-      const myPending: string[] = [];
+      const confirmed: {date: string, time: string}[] = [];
+      const myPending: {date: string, time: string, id: number}[] = [];
 
       bookings.forEach((b: CalendarBooking) => {
+        // Use local components directly based on the startAt value returned
+        // We assume backend startAt represents the exact intended slot
         const startDate = new Date(b.startAt);
+        const dateStr = getLocalDateString(startDate);
         const timeStr = startDate.toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
         });
 
         if (b.status === "confirmed") {
-          confirmed.push(timeStr);
+          confirmed.push({ date: dateStr, time: timeStr });
         } else if (
           b.status === "pending" &&
           user &&
           b.userId === user.userId
         ) {
-          myPending.push(timeStr);
+          myPending.push({ date: dateStr, time: timeStr, id: b.id });
         }
       });
 
       setBookedSlots(confirmed);
       setPendingBookingSlots(myPending);
-
-      // Store blocked slots
       setBlockedSlotsList(calendarData.blockedSlots || []);
     } catch (error) {
       console.error("Error fetching calendar data:", error);
@@ -196,30 +230,39 @@ export default function ResourceDetailPage() {
     }
   };
 
-  const handleDateChange = (days: number) => {
-    const today = new Date(new Date().setHours(0, 0, 0, 0));
-    const newDate = new Date(selectedDate);
+  const handleWeekChange = (offsetWeeks: number) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    // Skip closed days (try up to 7 days to avoid infinite loop)
-    for (let i = 0; i < 7; i++) {
-      newDate.setDate(newDate.getDate() + days);
-      // Don't allow past dates
-      if (newDate < today) return;
-      // If this day is open, use it
-      if (!isDayClosed(newDate)) {
-        setSelectedDate(new Date(newDate));
-        setSelectedSlot(null);
-        setBookingSuccess(null);
-        return;
-      }
-    }
+    const newDate = new Date(currentWeekDate);
+    newDate.setDate(newDate.getDate() + (offsetWeeks * 7));
+    
+    setCurrentWeekDate(newDate);
+    setSelectedSlot(null);
+    setBookingSuccess(null);
   };
 
-  const isSlotBlocked = (time: string) => {
-    const dateStr = selectedDate.toISOString().split("T")[0];
-    return blockedSlotsList.some(
-      (bs) => bs.date === dateStr && time >= bs.startTime && time < bs.endTime,
-    );
+  const handleCancelBooking = async () => {
+    if (!selectedSlot?.pendingId) return;
+
+    try {
+      setBooking(true);
+      await toast.promise(
+        bookingsApi.cancel(selectedSlot.pendingId, "Cancelada por el cliente"),
+        {
+          loading: "Anulando reserva...",
+          success: "Reserva anulada con éxito",
+          error: "Error al anular la reserva",
+        }
+      );
+
+      setSelectedSlot(null);
+      fetchCalendarData();
+    } catch {
+      // Handled by toast.promise
+    } finally {
+      setBooking(false);
+    }
   };
 
   const handleBooking = async () => {
@@ -233,17 +276,24 @@ export default function ResourceDetailPage() {
 
     try {
       setBooking(true);
-      const dateStr = selectedDate.toISOString().split("T")[0];
-      const slot = timeSlots.find((s) => s.start === selectedSlot);
-      const endTime = slot?.end || selectedSlot;
+      const dateStr = selectedSlot.date;
+      
+      // Calculate end time by adding slotMinutes to the start time 
+      const [hours, minutes] = selectedSlot.time.split(":").map(Number);
+      const endDate = new Date(currentWeekDate);
+      endDate.setHours(hours, minutes + (resource.slotMinutes || 60), 0, 0);
+      const endStr = endDate.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
       const requiresApproval = resource.branch?.requiresApproval;
 
       const result = await toast.promise(
         bookingsApi.createAsUser({
           resourceId: resource.resourceId,
-          startAt: `${dateStr}T${selectedSlot}:00`,
-          endAt: `${dateStr}T${endTime}:00`,
+          startAt: `${dateStr}T${selectedSlot.time}:00`,
+          endAt: `${dateStr}T${endStr}:00`,
         }),
         {
           loading: "Realizando reserva...",
@@ -272,31 +322,12 @@ export default function ResourceDetailPage() {
     }
   };
 
-  /* eslint-disable react-hooks/exhaustive-deps */
-  const isSlotBooked = (time: string) => bookedSlots.includes(time);
-  const isSlotPending = (time: string) => pendingBookingSlots.includes(time);
-  /* eslint-enable react-hooks/exhaustive-deps */
-  const isSlotPast = (time: string) => {
-    const today = new Date();
-    const slotDate = new Date(selectedDate);
-    const [hours, minutes] = time.split(":").map(Number);
-    slotDate.setHours(hours, minutes, 0, 0);
-    return slotDate < today;
-  };
-
   const getBranchAmenities = () => {
     if (!resource?.branch) return [];
     return AMENITIES.filter(
       (amenity) =>
         resource.branch![amenity.key as keyof typeof resource.branch],
     );
-  };
-
-  // Get branch hours display string
-  const getBranchHoursDisplay = () => {
-    const hours = getHoursForDate(selectedDate);
-    if (!hours || hours.isClosed) return null;
-    return `${hours.openTime} - ${hours.closeTime}`;
   };
 
   if (loading) {
@@ -323,8 +354,6 @@ export default function ResourceDetailPage() {
 
   const amenities = getBranchAmenities();
   const requiresApproval = resource.branch?.requiresApproval;
-  const dayClosed = isDayClosed(selectedDate);
-  const hoursDisplay = getBranchHoursDisplay();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -338,27 +367,21 @@ export default function ResourceDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Resource Info */}
-        <div className="lg:col-span-2">
-          <div className="relative h-64 md:h-80 bg-muted rounded-lg overflow-hidden mb-6">
-            {resource.imageUrl ? (
-              <img
-                src={resource.imageUrl}
+        <div className="lg:col-span-1 lg:order-1">
+          <div className="mb-6 relative">
+             <ImageGallery 
+                images={resource.images?.map(img => getAssetUrl(img.imageUrl)) || (resource.imageUrl ? [getAssetUrl(resource.imageUrl)] : [])}
                 alt={resource.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                <span className="text-6xl">
-                  {resource.sport?.name === "Fútbol" && "⚽"}
-                  {resource.sport?.name === "Tenis" && "🎾"}
-                  {resource.sport?.name === "Pádel" && "🏸"}
-                  {resource.sport?.name === "Básquetbol" && "🏀"}
-                  {resource.sport?.name === "Voleibol" && "🏐"}
-                  {!resource.sport?.name && "🏟️"}
-                </span>
-              </div>
-            )}
-            <Badge className="absolute top-4 right-4" variant="secondary">
+                fallbackIcon={<span className="text-6xl text-primary/50">
+                   {resource.sport?.name === "Fútbol" && "⚽"}
+                   {resource.sport?.name === "Tenis" && "🎾"}
+                   {resource.sport?.name === "Pádel" && "🏸"}
+                   {resource.sport?.name === "Básquetbol" && "🏀"}
+                   {resource.sport?.name === "Voleibol" && "🏐"}
+                   {!resource.sport?.name && "🏟️"}
+                </span>}
+             />
+            <Badge className="absolute top-4 right-4 z-10 shadow-sm" variant="secondary">
               {resource.sport?.name || "Deporte"}
             </Badge>
           </div>
@@ -374,12 +397,6 @@ export default function ResourceDetailPage() {
                   {resource.branch.tenant &&
                     ` - ${resource.branch.tenant.name}`}
                 </span>
-              </div>
-            )}
-            {hoursDisplay && (
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                <span>{hoursDisplay}</span>
               </div>
             )}
             <div className="flex items-center gap-1">
@@ -491,8 +508,8 @@ export default function ResourceDetailPage() {
         </div>
 
         {/* Booking Panel */}
-        <div>
-          <Card className="sticky top-24">
+        <div className="lg:col-span-2 lg:order-2">
+          <Card>
             <CardHeader>
               <CardTitle>Reservar</CardTitle>
               <CardDescription>Selecciona fecha y horario</CardDescription>
@@ -550,136 +567,215 @@ export default function ResourceDetailPage() {
                 </div>
               )}
 
-              {/* Date Selector */}
+              {/* Week Navigation */}
               <div className="flex items-center justify-between">
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => handleDateChange(-1)}
+                  onClick={() => handleWeekChange(-1)}
                   disabled={
-                    selectedDate <= new Date(new Date().setHours(0, 0, 0, 0))
+                    new Date(weekStartStr) <= new Date(new Date().setHours(0, 0, 0, 0))
                   }
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <div className="text-center">
-                  <p className="font-medium">
-                    {formatDate(selectedDate.toISOString())}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedDate.toLocaleDateString("es-ES", {
-                      weekday: "long",
-                    })}
+                  <p className="font-medium text-sm">
+                    {formatDate(weekStartStr)} - {formatDate(weekEndStr)}
                   </p>
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => handleDateChange(1)}
+                  onClick={() => handleWeekChange(1)}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Closed day message */}
-              {dayClosed ? (
-                <div className="flex items-center gap-3 p-6 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center">
-                  <Ban className="h-5 w-5 text-zinc-500 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Cerrado
-                    </p>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      La sucursal no opera este día
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Time Slots */}
-                  <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-                    {timeSlots.map((slot) => {
-                      const booked = isSlotBooked(slot.start);
-                      const pending = isSlotPending(slot.start);
-                      const blocked = isSlotBlocked(slot.start);
-                      const past = isSlotPast(slot.start);
-                      const disabled = booked || blocked || past || pending;
-                      const selected = selectedSlot === slot.start;
-
+              {/* Weekly Calendar Grid */}
+              <div className="border rounded-lg overflow-x-auto shadow-xs bg-card">
+                <div className="min-w-[700px]">
+                  {/* Grid Header (Days) */}
+                  <div className="grid grid-cols-[auto_repeat(7,1fr)] bg-muted/50 border-b">
+                    <div className="w-16 sticky left-0 bg-muted/50 border-r z-20"></div>
+                    {weekDays.map((date) => {
+                      const dateStr = getLocalDateString(date);
+                      const isToday = dateStr === getLocalDateString(new Date());
                       return (
-                        <Button
-                          key={slot.start}
-                          variant={selected ? "default" : "outline"}
-                          size="sm"
+                        <div
+                          key={dateStr}
                           className={cn(
-                            "text-xs relative overflow-hidden",
-                            disabled &&
-                              "opacity-50 cursor-not-allowed",
-                            disabled && !pending && "line-through",
-                            booked &&
-                              "bg-red-100 dark:bg-red-900/20 border-red-300",
-                            pending &&
-                              "bg-amber-100 dark:bg-amber-900/20 border-amber-300 opacity-100",
-                            blocked &&
-                              "bg-zinc-100 dark:bg-zinc-900/20 border-zinc-300",
+                            "py-3 px-2 text-center border-r last:border-r-0 flex flex-col items-center justify-center",
+                            isToday && "bg-primary/5",
                           )}
-                          disabled={disabled}
-                          onClick={() => setSelectedSlot(slot.start)}
                         >
-                          {slot.start}
-                          {pending && (
-                            <span className="absolute inset-0 flex items-center justify-center bg-amber-100/90 dark:bg-amber-900/90 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                              Pendiente
-                            </span>
-                          )}
-                        </Button>
+                          <span className={cn(
+                            "text-xs font-medium uppercase",
+                            isToday ? "text-primary" : "text-muted-foreground"
+                          )}>
+                            {date.toLocaleDateString("es-ES", { weekday: "short" })}
+                          </span>
+                          <span className={cn(
+                            "text-lg font-bold mt-0.5 w-8 h-8 flex items-center justify-center rounded-full",
+                            isToday ? "bg-primary text-primary-foreground" : "text-foreground"
+                          )}>
+                            {date.getDate()}
+                          </span>
+                        </div>
                       );
                     })}
                   </div>
 
-                  {timeSlots.length === 0 && (
-                    <p className="text-sm text-center text-muted-foreground py-4">
-                      No hay horarios disponibles para este día
-                    </p>
-                  )}
-                </>
-              )}
+                  {/* Grid Body (Time Slots) */}
+                  <div className="max-h-[500px] overflow-y-auto relative">
+                    {gridTimeSlots.length === 0 ? (
+                      <div className="py-12 text-center text-muted-foreground flex flex-col items-center">
+                        <Ban className="h-8 w-8 mb-2 opacity-20" />
+                        <p>No hay horarios disponibles esta semana</p>
+                      </div>
+                    ) : (
+                      gridTimeSlots.map((slot, timeIndex) => (
+                        <div
+                          key={slot.start}
+                          className="grid grid-cols-[auto_repeat(7,1fr)] border-b last:border-b-0 group"
+                        >
+                          {/* Time Column */}
+                          <div className="w-16 sticky left-0 bg-background border-r flex flex-col justify-start py-2 px-1 text-center z-10 group-hover:bg-muted/30 transition-colors">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {slot.start}
+                            </span>
+                          </div>
 
-              {/* Selected Slot Summary */}
-              {selectedSlot && (
-                <div className="p-4 bg-muted rounded-lg">
+                          {/* Day Columns for this time */}
+                          {weekDays.map((date, dayIndex) => {
+                            const dateStr = getLocalDateString(date);
+                            const timeStr = slot.start;
+                            
+                            // Validations
+                            const closed = isDayClosed(date);
+                            const past = (() => {
+                              const today = new Date();
+                              const [hours, minutes] = timeStr.split(":").map(Number);
+                              const cellDate = new Date(date);
+                              cellDate.setHours(hours, minutes, 0, 0);
+                              return cellDate < today;
+                            })();
+                            
+                            const booked = bookedSlots.some(b => b.date === dateStr && b.time === timeStr);
+                            const pendingCell = pendingBookingSlots.find(b => b.date === dateStr && b.time === timeStr);
+                            const pending = !!pendingCell;
+                            const blocked = blockedSlotsList.some(bs => bs.date === dateStr && timeStr >= bs.startTime && timeStr < bs.endTime);
+                            
+                            const disabled = closed || past || booked || blocked; // pending can be clicked to cancel
+                            const isSelected = selectedSlot?.date === dateStr && selectedSlot?.time === timeStr;
+
+                            return (
+                              <div
+                                key={`${dateStr}-${timeStr}`}
+                                className={cn(
+                                  "border-r last:border-r-0 min-h-[48px] p-1 transition-all",
+                                  (!disabled || pending) && "hover:bg-primary/10 cursor-pointer",
+                                  (disabled && !pending) && "bg-muted/30 cursor-not-allowed",
+                                  isSelected && "bg-primary/20 ring-1 ring-inset ring-primary",
+                                )}
+                                onClick={() => {
+                                  if (!disabled || pending) {
+                                    setSelectedSlot({ date: dateStr, time: timeStr, pendingId: pendingCell?.id });
+                                    setBookingSuccess(null);
+                                    setTimeout(() => {
+                                      bookingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                    }, 100);
+                                  }
+                                }}
+                              >
+                                <div className="w-full h-full flex items-center justify-center">
+                                  {isSelected ? (
+                                    <div className="bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded w-full text-center shadow-sm">
+                                      Seleccionado
+                                    </div>
+                                  ) : booked ? (
+                                    <div className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-medium px-2 py-1 rounded w-full text-center truncate">
+                                      Ocupado
+                                    </div>
+                                  ) : pending ? (
+                                    <div className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-medium px-2 py-1 rounded w-full text-center truncate">
+                                      Pendiente
+                                    </div>
+                                  ) : blocked ? (
+                                    <div className="bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 text-[10px] font-medium px-2 py-1 rounded w-full text-center truncate flex items-center justify-center gap-1">
+                                      <Ban className="w-3 h-3" /> ND
+                                    </div>
+                                  ) : closed ? (
+                                    <div className="opacity-0 group-hover:opacity-100 text-[9px] text-zinc-400 text-center w-full">
+                                      Cerrado
+                                    </div>
+                                  ) : !past ? (
+                                    <div className="opacity-0 group-hover:opacity-100 text-[10px] text-primary/70 font-medium text-center w-full">
+                                      Libre
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Selected Slot Summary & Book Button Wrapper */}
+              <div ref={bookingSectionRef} className="pt-4 mt-6 border-t border-border">
+                {selectedSlot && (
+                  <div className="p-4 bg-muted rounded-lg border border-primary/20 mb-4">
                   <p className="text-sm text-muted-foreground mb-1">
                     Resumen de reserva
                   </p>
-                  <p className="font-medium">
-                    {formatDate(selectedDate.toISOString())} a las{" "}
-                    {selectedSlot}
+                  <p className="font-medium text-lg flex items-center gap-2">
+                    {formatDate(selectedSlot.date)} a las {selectedSlot.time}
                   </p>
-                  <p className="text-lg font-bold text-primary mt-2">
-                    {formatCurrency(resource.pricePerHour)}
-                  </p>
-                  {requiresApproval && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
-                      <Info className="h-3 w-3" />
-                      Sujeta a aprobación del administrador
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xl font-bold text-primary">
+                      {formatCurrency(resource.pricePerHour)}
                     </p>
-                  )}
+                    {requiresApproval && (
+                      <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-200 bg-amber-50 dark:bg-amber-950/30">
+                        <Info className="h-3 w-3 mr-1" />
+                        Sujeta a aprobación
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               )}
 
               {/* Book Button */}
-              <Button
-                className="w-full"
-                size="lg"
-                disabled={!selectedSlot || booking || dayClosed}
-                onClick={handleBooking}
-              >
-                {booking
-                  ? "Reservando..."
-                  : requiresApproval
-                    ? "Solicitar Reserva"
-                    : "Confirmar Reserva"}
-              </Button>
+              {selectedSlot?.pendingId ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  variant="destructive"
+                  disabled={booking}
+                  onClick={handleCancelBooking}
+                >
+                  {booking ? "Anulando..." : "Anular Reserva Pendiente"}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={!selectedSlot || booking}
+                  onClick={handleBooking}
+                >
+                  {booking
+                    ? "Reservando..."
+                    : requiresApproval
+                      ? "Solicitar Reserva"
+                      : "Confirmar Reserva"}
+                </Button>
+              )}
+              </div>
 
               {!user && (
                 <p className="text-xs text-center text-muted-foreground">

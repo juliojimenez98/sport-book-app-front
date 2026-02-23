@@ -29,7 +29,7 @@ import {
   Dumbbell,
   Bath,
 } from "lucide-react";
-import { publicApi } from "@/lib/api";
+import { publicApi, getAssetUrl } from "@/lib/api/endpoints";
 import { Tenant, Branch, Resource } from "@/lib/types";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
 import { formatCurrency } from "@/lib/utils";
@@ -216,16 +216,26 @@ export default function BranchPage() {
                   key={resource.resourceId}
                   className="overflow-hidden hover:shadow-lg transition-shadow"
                 >
-                  <div className="h-40 bg-linear-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                    <span className="text-4xl">
-                      {resource.sport?.name === "Fútbol" && "⚽"}
-                      {resource.sport?.name === "Tenis" && "🎾"}
-                      {resource.sport?.name === "Pádel" && "🏸"}
-                      {resource.sport?.name === "Básquetbol" && "🏀"}
-                      {resource.sport?.name === "Voleibol" && "🏐"}
-                      {!resource.sport?.name && "🏟️"}
-                    </span>
-                  </div>
+                  {resource.images && resource.images.length > 0 ? (
+                    <div className="h-40 w-full relative bg-muted">
+                      <img
+                        src={getAssetUrl(resource.images[0].imageUrl)}
+                        alt={resource.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-40 bg-linear-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                      <span className="text-4xl">
+                        {resource.sport?.name === "Fútbol" && "⚽"}
+                        {resource.sport?.name === "Tenis" && "🎾"}
+                        {resource.sport?.name === "Pádel" && "🏸"}
+                        {resource.sport?.name === "Básquetbol" && "🏀"}
+                        {resource.sport?.name === "Voleibol" && "🏐"}
+                        {!resource.sport?.name && "🏟️"}
+                      </span>
+                    </div>
+                  )}
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">{resource.name}</CardTitle>
                     <CardDescription>
