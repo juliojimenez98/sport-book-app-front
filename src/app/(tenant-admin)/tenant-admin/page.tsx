@@ -31,7 +31,7 @@ import {
   TenantUser,
   Booking,
 } from "@/lib/types";
-import { formatDate, formatTime } from "@/lib/utils";
+import { formatDate, formatTime, formatCurrency, cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { 
   BarChart, 
@@ -404,6 +404,20 @@ export default function TenantAdminDashboardPage() {
                                     <p className="text-xs text-muted-foreground mt-1">
                                         👤 {booking.user?.firstName} {booking.user?.lastName}
                                     </p>
+                                    <p className="text-xs font-semibold mt-1">
+                                      {booking.originalPrice && booking.originalPrice !== booking.totalPrice ? (
+                                        <>
+                                          <span className="line-through text-muted-foreground mr-1">
+                                            {formatCurrency(booking.originalPrice, booking.currency)}
+                                          </span>
+                                          <span className="text-emerald-600 dark:text-emerald-400">
+                                            {formatCurrency(booking.totalPrice, booking.currency)}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        formatCurrency(booking.totalPrice, booking.currency)
+                                      )}
+                                    </p>
                                 </div>
                                 <Badge variant="warning">Pendiente</Badge>
                             </div>
@@ -479,6 +493,20 @@ export default function TenantAdminDashboardPage() {
                         {formatDate(booking.startAt)} ·{" "}
                         {formatTime(booking.startAt)} -{" "}
                         {formatTime(booking.endAt)}
+                      </p>
+                      <p className="text-xs font-medium mt-1">
+                        {booking.originalPrice && booking.originalPrice !== booking.totalPrice ? (
+                          <>
+                            <span className="line-through text-muted-foreground mr-1">
+                              {formatCurrency(booking.originalPrice, booking.currency)}
+                            </span>
+                            <span className="text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(booking.totalPrice, booking.currency)}
+                            </span>
+                          </>
+                        ) : (
+                          formatCurrency(booking.totalPrice, booking.currency)
+                        )}
                       </p>
                     </div>
                   </div>

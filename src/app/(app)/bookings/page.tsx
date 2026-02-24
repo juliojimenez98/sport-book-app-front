@@ -27,6 +27,7 @@ import {
   formatTime,
   formatCurrency,
   getStatusColor,
+  cn,
 } from "@/lib/utils";
 
 const statusLabels: Record<BookingStatus, string> = {
@@ -190,12 +191,25 @@ export default function BookingsPage() {
                           </Badge>
                         </div>
                         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-0 w-full sm:w-auto mt-2 sm:mt-0">
-                          <p className="font-semibold text-lg">
-                            {formatCurrency(
-                              booking.totalPrice,
-                              booking.currency,
+                          <div className="flex flex-col items-end">
+                            {booking.originalPrice && booking.originalPrice !== booking.totalPrice && (
+                              <p className="text-xs line-through text-muted-foreground font-normal">
+                                {formatCurrency(
+                                  booking.originalPrice,
+                                  booking.currency,
+                                )}
+                              </p>
                             )}
-                          </p>
+                            <p className={cn(
+                              "font-semibold text-lg",
+                              booking.originalPrice && booking.originalPrice !== booking.totalPrice ? "text-emerald-600 dark:text-emerald-400" : ""
+                            )}>
+                              {formatCurrency(
+                                booking.totalPrice,
+                                booking.currency,
+                              )}
+                            </p>
+                          </div>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -263,9 +277,22 @@ export default function BookingsPage() {
                         >
                           {statusLabels[booking.status]}
                         </Badge>
-                        <p className="font-medium whitespace-nowrap">
-                          {formatCurrency(booking.totalPrice, booking.currency)}
-                        </p>
+                        <div className="flex flex-col items-end">
+                          {booking.originalPrice && booking.originalPrice !== booking.totalPrice && (
+                            <p className="text-[10px] line-through text-muted-foreground font-normal">
+                              {formatCurrency(
+                                booking.originalPrice,
+                                booking.currency,
+                              )}
+                            </p>
+                          )}
+                          <p className={cn(
+                            "font-medium whitespace-nowrap",
+                            booking.originalPrice && booking.originalPrice !== booking.totalPrice ? "text-emerald-600 dark:text-emerald-400" : ""
+                          )}>
+                            {formatCurrency(booking.totalPrice, booking.currency)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     {booking.status === BookingStatus.REJECTED &&

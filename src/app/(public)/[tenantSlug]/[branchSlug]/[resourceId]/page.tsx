@@ -284,10 +284,9 @@ export default function ResourceDetailPage() {
     const [hours, minutes] = selectedSlot.time.split(":").map(Number);
     const endDate = new Date(currentWeekDate);
     endDate.setHours(hours, minutes + (resource.slotMinutes || 60), 0, 0);
-    const endStr = endDate.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const endHours = String(endDate.getHours()).padStart(2, '0');
+    const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+    const endStr = `${endHours}:${endMinutes}`;
 
     try {
       const res = await publicApi.calculateDiscount({
@@ -798,11 +797,16 @@ export default function ResourceDetailPage() {
                       {pricePreview ? (
                         <>
                           {pricePreview.discount && (
-                            <span className="text-sm line-through text-muted-foreground font-normal mr-2">
+                            <span className="text-base line-through text-muted-foreground font-normal mr-2">
                               {formatCurrency(pricePreview.originalPrice)}
                             </span>
                           )}
-                          {formatCurrency(pricePreview.totalPrice)}
+                          <span className={cn(
+                            "text-2xl font-bold",
+                            pricePreview.discount ? "text-emerald-600 dark:text-emerald-400" : "text-primary"
+                          )}>
+                            {formatCurrency(pricePreview.totalPrice)}
+                          </span>
                         </>
                       ) : (
                         formatCurrency(resource.pricePerHour)
