@@ -19,6 +19,16 @@ export enum BookingSource {
   WALK_IN = "walk_in",
 }
 
+export enum DiscountType {
+  PERCENTAGE = "percentage",
+  FIXED_AMOUNT = "fixed_amount",
+}
+
+export enum DiscountConditionType {
+  PROMO_CODE = "promo_code",
+  TIME_BASED = "time_based",
+}
+
 export enum RoleName {
   SUPER_ADMIN = "super_admin",
   TENANT_ADMIN = "tenant_admin",
@@ -195,6 +205,8 @@ export interface Booking {
   resource?: Resource;
   user?: UserProfile;
   guest?: Guest;
+  discountId?: number;
+  originalPrice?: number;
 }
 
 export interface BookingCancellation {
@@ -246,6 +258,48 @@ export interface LoginResponse {
   user: UserProfile;
   accessToken: string;
   refreshToken: string;
+}
+
+export interface Discount {
+  discountId: number;
+  tenantId: number;
+  branchId?: number;
+  resources?: { resourceId: number; name: string }[];
+  name: string;
+  code?: string;
+  type: DiscountType;
+  value: number;
+  conditionType: DiscountConditionType;
+  daysOfWeek?: number[];
+  startTime?: string;
+  endTime?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiscountForm {
+  tenantId: number;
+  branchId?: number;
+  resourceIds?: number[];
+  name: string;
+  code?: string;
+  type: DiscountType;
+  value: number;
+  conditionType: DiscountConditionType;
+  daysOfWeek?: number[];
+  startTime?: string;
+  endTime?: string;
+  isActive?: boolean;
+}
+
+export interface SurveyResponseForm {
+  bookingId: number;
+  resourceCondition: number;
+  amenitiesRating: number;
+  attentionRating: number;
+  punctualityRating: number;
+  comments?: string;
 }
 
 export interface TokenPayload {
@@ -339,6 +393,7 @@ export interface GuestBookingForm {
     phone?: string;
   };
   notes?: string;
+  discountCode?: string;
 }
 
 export interface UserBookingForm {
@@ -346,6 +401,7 @@ export interface UserBookingForm {
   startAt: string;
   endAt: string;
   notes?: string;
+  discountCode?: string;
 }
 
 export interface TenantForm {

@@ -41,7 +41,13 @@ export function formatDate(
     month: "long",
     day: "numeric",
   };
-  return new Date(date).toLocaleDateString("es-MX", options || defaultOptions);
+  let d = new Date(date);
+  // Prevent local timezone shifting when parsing a simple "YYYY-MM-DD" string
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    d = new Date(`${date}T12:00:00`);
+  }
+
+  return d.toLocaleDateString("es-MX", options || defaultOptions);
 }
 
 /**

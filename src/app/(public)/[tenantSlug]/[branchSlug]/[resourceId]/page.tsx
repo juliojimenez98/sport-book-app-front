@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   publicApi,
   bookingsApi,
@@ -40,7 +41,7 @@ import {
   branchesApi,
   getAssetUrl
 } from "@/lib/api/endpoints";
-import { Resource, BranchHours, CalendarBooking, CalendarBlockedSlot } from "@/lib/types";
+import { Resource, BranchHours, CalendarBooking, CalendarBlockedSlot, Discount, DiscountType } from "@/lib/types";
 import { formatCurrency, formatDate, cn, generateTimeSlots } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
@@ -88,6 +89,12 @@ export default function ResourceDetailPage() {
   
   const [booking, setBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<{ status: string } | null>(null);
+
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState("");
+  const [pricePreview, setPricePreview] = useState<{ originalPrice: number; totalPrice: number; discount: Discount | null } | null>(null);
+  const [isCheckingDiscount, setIsCheckingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState("");
 
   const bookingSectionRef = useRef<HTMLDivElement>(null);
 
@@ -239,6 +246,7 @@ export default function ResourceDetailPage() {
     
     setCurrentWeekDate(newDate);
     setSelectedSlot(null);
+    setPricePreview(null);
     setBookingSuccess(null);
   };
 
@@ -264,6 +272,54 @@ export default function ResourceDetailPage() {
       setBooking(false);
     }
   };
+
+  const calculatePrice = async (codeToApply?: string) => {
+    if (!selectedSlot || !resource?.branch?.tenantId) return;
+    
+    setIsCheckingDiscount(true);
+    setDiscountError("");
+    setPricePreview(null);
+
+    const dateStr = selectedSlot.date;
+    const [hours, minutes] = selectedSlot.time.split(":").map(Number);
+    const endDate = new Date(currentWeekDate);
+    endDate.setHours(hours, minutes + (resource.slotMinutes || 60), 0, 0);
+    const endStr = endDate.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    try {
+      const res = await publicApi.calculateDiscount({
+        code: codeToApply,
+        tenantId: resource.branch.tenantId,
+        branchId: resource.branch.branchId,
+        resourceId: resource.resourceId,
+        startAt: `${dateStr}T${selectedSlot.time}:00`,
+        endAt: `${dateStr}T${endStr}:00`,
+      });
+      setPricePreview(res as any);
+      if (codeToApply && res.discount) {
+        toast.success("Código aplicado con éxito");
+      } else if (codeToApply && !res.discount) {
+        setDiscountError("Código inválido o expirado");
+      }
+    } catch (error: any) {
+      if (codeToApply) {
+        setDiscountError(error.message || "Código inválido");
+      }
+    } finally {
+      setIsCheckingDiscount(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedSlot && !selectedSlot.pendingId) {
+      calculatePrice(discountCode);
+    } else {
+      setPricePreview(null);
+    }
+  }, [selectedSlot]);
 
   const handleBooking = async () => {
     if (!selectedSlot || !resource) return;
@@ -294,6 +350,7 @@ export default function ResourceDetailPage() {
           resourceId: resource.resourceId,
           startAt: `${dateStr}T${selectedSlot.time}:00`,
           endAt: `${dateStr}T${endStr}:00`,
+          discountCode: pricePreview?.discount?.code || undefined,
         }),
         {
           loading: "Realizando reserva...",
@@ -368,7 +425,7 @@ export default function ResourceDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Resource Info */}
         <div className="lg:col-span-1 lg:order-1">
-          <div className="mb-6 relative">
+          <div className="mb-6 relative h-64 md:h-80 rounded-xl overflow-hidden">
              <ImageGallery 
                 images={resource.images?.map(img => getAssetUrl(img.imageUrl)) || (resource.imageUrl ? [getAssetUrl(resource.imageUrl)] : [])}
                 alt={resource.name}
@@ -738,7 +795,18 @@ export default function ResourceDetailPage() {
                   </p>
                   <div className="flex items-center justify-between mt-2">
                     <p className="text-xl font-bold text-primary">
-                      {formatCurrency(resource.pricePerHour)}
+                      {pricePreview ? (
+                        <>
+                          {pricePreview.discount && (
+                            <span className="text-sm line-through text-muted-foreground font-normal mr-2">
+                              {formatCurrency(pricePreview.originalPrice)}
+                            </span>
+                          )}
+                          {formatCurrency(pricePreview.totalPrice)}
+                        </>
+                      ) : (
+                        formatCurrency(resource.pricePerHour)
+                      )}
                     </p>
                     {requiresApproval && (
                       <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-200 bg-amber-50 dark:bg-amber-950/30">
@@ -746,6 +814,41 @@ export default function ResourceDetailPage() {
                         Sujeta a aprobación
                       </Badge>
                     )}
+                  </div>
+                  
+                  {pricePreview?.discount && (
+                    <div className="flex items-center justify-between mt-1 text-emerald-600">
+                      <p className="text-sm font-medium">Descuento aplicado: {pricePreview.discount.name}</p>
+                      <p className="text-sm font-bold bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 rounded text-emerald-700 dark:text-emerald-400">
+                        -{pricePreview.discount.type === DiscountType.PERCENTAGE ? `${pricePreview.discount.value}%` : formatCurrency(pricePreview.discount.value)}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-4 pt-4 border-t border-border mt-3">
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">¿Tienes un código de descuento?</label>
+                    <div className="flex gap-2">
+                       <Input 
+                         value={discountCode}
+                         onChange={(e) => {
+                           setDiscountCode(e.target.value.toUpperCase());
+                           if (discountError) setDiscountError("");
+                         }}
+                         placeholder="Ej. VERANO20"
+                         className="h-9 uppercase font-mono"
+                         disabled={booking || isCheckingDiscount}
+                       />
+                       <Button 
+                         variant="secondary" 
+                         size="sm" 
+                         className="h-9"
+                         onClick={() => calculatePrice(discountCode)}
+                         disabled={!discountCode || booking || isCheckingDiscount || pricePreview?.discount?.code === discountCode}
+                       >
+                         {isCheckingDiscount ? "Validando..." : "Aplicar"}
+                       </Button>
+                    </div>
+                    {discountError && <p className="text-xs text-red-500 mt-1">{discountError}</p>}
                   </div>
                 </div>
               )}

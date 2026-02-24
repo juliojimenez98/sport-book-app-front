@@ -17,6 +17,7 @@ import {
   Activity,
   Clock,
   X,
+  Tag,
 } from "lucide-react";
 import { useState } from "react";
 import { getInitials, cn } from "@/lib/utils";
@@ -252,6 +253,7 @@ export function TenantAdminSidebar({
     { href: "/tenant-admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/tenant-admin/branches", label: "Sucursales", icon: Building2 },
     { href: "/tenant-admin/users", label: "Usuarios", icon: Users },
+    { href: "/tenant-admin/discounts", label: "Descuentos", icon: Tag },
     { href: "/tenant-admin/settings", label: "Configuración", icon: Settings },
   ];
 
@@ -280,6 +282,7 @@ export function BranchAdminSidebar({
     { href: "/branch-admin/calendar", label: "Calendario", icon: CalendarDays },
     { href: "/branch-admin/resources", label: "Canchas", icon: Activity },
     { href: "/branch-admin/hours", label: "Horarios", icon: Clock },
+    { href: "/branch-admin/discounts", label: "Descuentos", icon: Tag },
     { href: "/branch-admin/settings", label: "Configuración", icon: Settings },
   ];
 

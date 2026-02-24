@@ -24,6 +24,9 @@ import {
   BlockedSlot,
   BlockedSlotForm,
   LocationsData,
+  Discount,
+  DiscountForm,
+  SurveyResponseForm,
 } from "@/lib/types";
 
 // ============================================
@@ -325,6 +328,12 @@ export const publicApi = {
 
   getResource: (id: number | string) =>
     api.get<Resource>(`/public/resources/${id}`, { skipAuth: true }),
+
+  validateDiscount: (data: { code: string; tenantId: number; branchId?: number; resourceId?: number }) =>
+    api.post<Discount>(`/public/discounts/validate`, data, { skipAuth: true }),
+
+  calculateDiscount: (data: { code?: string; tenantId: number; branchId?: number; resourceId: number; startAt: string, endAt: string }) =>
+    api.post<{ originalPrice: number; totalPrice: number; discount: Discount | null }>(`/public/discounts/calculate`, data, { skipAuth: true }),
 };
 
 // ============================================
@@ -357,4 +366,37 @@ export const getAssetUrl = (key: string | null | undefined): string => {
   // Return the configured backend endpoint passing the `key`
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
   return `${baseUrl}/public/assets?key=${key}`;
+};
+
+// ============================================
+// Discounts endpoints
+// ============================================
+
+export const discountsApi = {
+  list: (params?: { tenantId?: number; branchId?: number }) => {
+    const query = params
+      ? `?${new URLSearchParams(
+          Object.entries(params)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, String(v)]),
+        ).toString()}`
+      : "";
+    return api.get<Discount[]>(`/discounts${query}`);
+  },
+
+  create: (data: DiscountForm) => api.post<Discount>("/discounts", data),
+
+  update: (id: number, data: Partial<DiscountForm>) =>
+    api.put<Discount>(`/discounts/${id}`, data),
+
+  delete: (id: number) => api.delete<void>(`/discounts/${id}`),
+};
+
+// ============================================
+// Surveys endpoints
+// ============================================
+
+export const surveysApi = {
+  submit: (data: SurveyResponseForm) =>
+    api.post<any>("/public/surveys/submit", data, { skipAuth: true }),
 };
