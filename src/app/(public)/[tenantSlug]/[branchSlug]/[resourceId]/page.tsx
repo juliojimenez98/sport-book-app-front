@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Ban,
+  BadgePercent,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ import {
   branchesApi,
   getAssetUrl
 } from "@/lib/api/endpoints";
-import { Resource, BranchHours, CalendarBooking, CalendarBlockedSlot, Discount, DiscountType } from "@/lib/types";
+import { Resource, BranchHours, CalendarBooking, CalendarBlockedSlot, Discount, DiscountType, CalendarResponse } from "@/lib/types";
 import { formatCurrency, formatDate, cn, generateTimeSlots } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
@@ -89,6 +90,9 @@ export default function ResourceDetailPage() {
   
   const [booking, setBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<{ status: string } | null>(null);
+
+  // Calendar Discounts
+  const [calendarDiscounts, setCalendarDiscounts] = useState<CalendarResponse["discounts"]>([]);
 
   // Discount code state
   const [discountCode, setDiscountCode] = useState("");
@@ -230,6 +234,7 @@ export default function ResourceDetailPage() {
       setBookedSlots(confirmed);
       setPendingBookingSlots(myPending);
       setBlockedSlotsList(calendarData.blockedSlots || []);
+      setCalendarDiscounts(calendarData.discounts || []);
     } catch (error) {
       console.error("Error fetching calendar data:", error);
       setBookedSlots([]);
@@ -723,6 +728,19 @@ export default function ResourceDetailPage() {
                             const pending = !!pendingCell;
                             const blocked = blockedSlotsList.some(bs => bs.date === dateStr && timeStr >= bs.startTime && timeStr < bs.endTime);
                             
+                            // Check for discounts on this slot
+                            const slotDiscount = calendarDiscounts.find((d: any) => {
+                              // Day of week check (0 is Sunday, which matches JS getDay())
+                              const dayMatch = !d.daysOfWeek || d.daysOfWeek.includes(date.getDay());
+                              if (!dayMatch) return false;
+
+                              // Time range check
+                              if (d.startTime && timeStr < d.startTime) return false;
+                              if (d.endTime && timeStr >= d.endTime) return false;
+
+                              return true;
+                            });
+                            
                             const disabled = closed || past || booked || blocked; // pending can be clicked to cancel
                             const isSelected = selectedSlot?.date === dateStr && selectedSlot?.time === timeStr;
 
@@ -766,11 +784,19 @@ export default function ResourceDetailPage() {
                                     <div className="opacity-0 group-hover:opacity-100 text-[9px] text-zinc-400 text-center w-full">
                                       Cerrado
                                     </div>
-                                  ) : !past ? (
-                                    <div className="opacity-0 group-hover:opacity-100 text-[10px] text-primary/70 font-medium text-center w-full">
-                                      Libre
-                                    </div>
-                                  ) : null}
+                                    ) : !past ? (
+                                      <div className="flex flex-col items-center justify-center gap-1 w-full">
+                                        <div className="opacity-0 group-hover:opacity-100 text-[10px] text-primary/70 font-medium text-center">
+                                          Libre
+                                        </div>
+                                        {slotDiscount && (
+                                          <div className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 animate-pulse">
+                                            <BadgePercent className="w-2.5 h-2.5" />
+                                            {slotDiscount.type === DiscountType.PERCENTAGE ? `-${slotDiscount.value}%` : `-${formatCurrency(slotDiscount.value)}`}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : null}
                                 </div>
                               </div>
                             );
