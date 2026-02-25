@@ -343,6 +343,15 @@ export interface CalendarResponse {
   to: string;
   bookings: CalendarBooking[];
   blockedSlots: CalendarBlockedSlot[];
+  discounts: {
+    discountId: number;
+    name: string;
+    type: DiscountType;
+    value: number;
+    daysOfWeek?: number[];
+    startTime?: string;
+    endTime?: string;
+  }[];
 }
 
 // API responses
