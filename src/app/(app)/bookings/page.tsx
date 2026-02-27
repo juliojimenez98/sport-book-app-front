@@ -32,6 +32,7 @@ import {
 
 const statusLabels: Record<BookingStatus, string> = {
   [BookingStatus.PENDING]: "Pendiente",
+  [BookingStatus.PENDING_PAYMENT]: "Pago pendiente",
   [BookingStatus.CONFIRMED]: "Confirmada",
   [BookingStatus.CANCELLED]: "Cancelada",
   [BookingStatus.REJECTED]: "Rechazada",
