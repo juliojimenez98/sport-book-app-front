@@ -23,11 +23,12 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { useAuth } from "@/contexts/AuthContext";
 
 const tenantSettingsSchema = z.object({
-  name: z.string().min(2, "Mínimo 2 caracteres"),
+  name: z.string().min(2, "Mínimo 2 caracteres").optional(),
   slug: z
     .string()
     .min(2, "Mínimo 2 caracteres")
-    .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
+    .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones")
+    .optional(),
   email: z.string().email("Email inválido"),
   phone: z.string().optional(),
   logoUrl: z.string().optional(),
@@ -46,7 +47,7 @@ const DEFAULT_COLORS = {
 };
 
 export default function TenantSettingsPage() {
-  const { user } = useAuth();
+  const { user, getTenantId } = useAuth();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +73,7 @@ export default function TenantSettingsPage() {
   const logoUrlValue = watch("logoUrl");
   const imagesValue = watch("images") || [];
 
-  const tenantId = user?.roles?.find((r) => r.scope === "tenant")?.tenantId;
+  const tenantId = getTenantId();
 
   useEffect(() => {
     if (tenantId) {
@@ -174,7 +175,7 @@ export default function TenantSettingsPage() {
                   id="name"
                   {...register("name")}
                   readOnly
-                  disabled
+                  className="bg-muted cursor-not-allowed"
                   title="Contacta a soporte técnico para cambiar este valor"
                 />
               </div>
@@ -185,7 +186,7 @@ export default function TenantSettingsPage() {
                   id="slug"
                   {...register("slug")}
                   readOnly
-                  disabled
+                  className="bg-muted cursor-not-allowed"
                   title="Contacta a soporte técnico para cambiar este valor"
                 />
               </div>

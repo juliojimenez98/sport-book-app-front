@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CalendarDays, Eye, EyeOff, Mail, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts";
+import { Logo } from "@/components/layout/Logo";
 import {
   Button,
   Input,
@@ -84,12 +85,12 @@ export default function RegisterPage() {
           }}
           className="px-8 py-8 text-center"
         >
-          <Link href="/" className="inline-flex items-center gap-2 justify-center">
-            <CalendarDays className="h-8 w-8 text-white" />
-            <span style={{ color: "#fff", fontSize: 22, fontWeight: 700 }}>
-              Easy Sport Book
-            </span>
-          </Link>
+          <Logo
+            className="justify-center"
+            imageClassName="h-12 w-12"
+            textClassName="text-white text-3xl"
+            href={null}
+          />
         </div>
 
         <CardContent className="pt-8 pb-6 text-center">
@@ -160,10 +161,11 @@ export default function RegisterPage() {
   return (
     <Card className="border-0 shadow-xl">
       <CardHeader className="text-center">
-        <Link href="/" className="flex items-center justify-center gap-2 mb-4">
-          <CalendarDays className="h-10 w-10 text-primary" />
-          <span className="text-2xl font-bold gradient-text">Easy Sport Book</span>
-        </Link>
+        <Logo
+          className="justify-center mb-4"
+          imageClassName="h-16 w-16"
+          textClassName="text-3xl"
+        />
         <CardTitle className="text-2xl">Crear cuenta</CardTitle>
         <CardDescription>
           Completa el formulario para registrarte

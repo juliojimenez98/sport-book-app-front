@@ -5,6 +5,7 @@
 // Enums
 export enum BookingStatus {
   PENDING = "pending",
+  PENDING_PAYMENT = "pending_payment",
   CONFIRMED = "confirmed",
   CANCELLED = "cancelled",
   COMPLETED = "completed",
@@ -207,6 +208,7 @@ export interface Booking {
   guest?: Guest;
   discountId?: number;
   originalPrice?: number;
+  branch?: Branch;
 }
 
 export interface BookingCancellation {
@@ -468,6 +470,8 @@ export interface TenantDashboardStats {
     pendingBookings: number;
     monthlyBookings: number;
     staffCount: number;
+    totalRevenueMonth: number;
+    totalRevenueAllTime: number;
   };
   recentBookings: Booking[];
   branchSummary: {
@@ -507,6 +511,7 @@ export interface BranchDashboardStats {
     occupancyRate: number;
   };
   upcomingBookings: Booking[];
+  pendingBookingsList: Booking[];
   bookingsChart: { date: string; bookings: number; revenue: number }[];
 }
 
@@ -547,4 +552,25 @@ export interface BlockedSlotForm {
   endTime: string;
   reason?: string;
   resourceId?: number | null;
+}
+
+export interface UserCard {
+  userCardId: number;
+  userId: number;
+  cardHolderName: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface CardFormInput {
+  cardHolderName: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault?: boolean;
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CalendarDays, Mail, Phone, MapPin } from "lucide-react";
+import { Logo } from "./Logo";
+import { Mail, Phone, MapPin } from "lucide-react";
 
 export function Footer() {
   return (
@@ -8,12 +9,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2">
-              <CalendarDays className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold gradient-text">
-                Easy Sport Book
-              </span>
-            </Link>
+            <Logo />
             <p className="text-sm text-muted-foreground">
               La plataforma líder en reservas de canchas deportivas. Reserva
               fácil, juega más.

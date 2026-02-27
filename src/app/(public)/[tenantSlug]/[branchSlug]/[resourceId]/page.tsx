@@ -337,8 +337,6 @@ export default function ResourceDetailPage() {
     try {
       setBooking(true);
       const dateStr = selectedSlot.date;
-      
-      // Calculate end time by adding slotMinutes to the start time 
       const [hours, minutes] = selectedSlot.time.split(":").map(Number);
       const endDate = new Date(currentWeekDate);
       endDate.setHours(hours, minutes + (resource.slotMinutes || 60), 0, 0);
@@ -347,37 +345,19 @@ export default function ResourceDetailPage() {
         minute: "2-digit",
       });
 
-      const requiresApproval = resource.branch?.requiresApproval;
-
-      const result = await toast.promise(
-        bookingsApi.createAsUser({
-          resourceId: resource.resourceId,
-          startAt: `${dateStr}T${selectedSlot.time}:00`,
-          endAt: `${dateStr}T${endStr}:00`,
-          discountCode: pricePreview?.discount?.code || undefined,
-        }),
-        {
-          loading: "Realizando reserva...",
-          success: requiresApproval
-            ? "Reserva enviada. Pendiente de aprobación."
-            : "¡Reserva confirmada con éxito!",
-          error: "Error al realizar la reserva",
-        },
-      );
-
-      // Show success state instead of navigating away
-      const bookingData =
-        (result as unknown as { data?: { status: string } }).data || result;
-      setBookingSuccess({
-        status:
-          (bookingData as { status?: string }).status ||
-          (requiresApproval ? "pending" : "confirmed"),
+      const paramsForCheckout = new URLSearchParams({
+        resourceId: resource.resourceId.toString(),
+        startAt: `${dateStr}T${selectedSlot.time}:00`,
+        endAt: `${dateStr}T${endStr}:00`,
       });
-      setSelectedSlot(null);
-      // Refresh calendar data
-      fetchCalendarData();
-    } catch {
-      // handled by toast.promise
+
+      if (pricePreview?.discount?.code) {
+        paramsForCheckout.append("discountCode", pricePreview.discount.code);
+      }
+
+      router.push(`/${tenantSlug}/${branchSlug}/checkout?${paramsForCheckout.toString()}`);
+    } catch (error) {
+      console.error("Error in handleBooking:", error);
     } finally {
       setBooking(false);
     }

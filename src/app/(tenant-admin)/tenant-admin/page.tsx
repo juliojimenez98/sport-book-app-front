@@ -21,6 +21,7 @@ import {
   XCircle,
   MapPin,
   Shield,
+  DollarSign,
 } from "lucide-react";
 import { useAuth } from "@/contexts";
 import { tenantsApi } from "@/lib/api";
@@ -42,31 +43,12 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { bookingsApi } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label, Textarea } from "@/components/ui";
 
 export default function TenantAdminDashboardPage() {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] =
     useState<TenantDashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Action states
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rejectDialog, setRejectDialog] = useState<{
-    open: boolean;
-    booking: Booking | null;
-  }>({ open: false, booking: null });
-  const [rejectionReason, setRejectionReason] = useState("");
 
   // Get tenant ID from current user's role
   const tenantRole = user?.roles?.find((r) => {
@@ -96,47 +78,6 @@ export default function TenantAdminDashboardPage() {
     loadDashboard();
   }, [loadDashboard]);
 
-  const handleConfirmBooking = async (booking: Booking) => {
-    setIsSubmitting(true);
-    try {
-      await toast.promise(
-        bookingsApi.confirm(booking.bookingId),
-        {
-          loading: "Confirmando reserva...",
-          success: "Reserva confirmada",
-          error: "Error al confirmar reserva"
-        }
-      );
-      loadDashboard();
-    } catch {
-      // handled by toast.promise
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRejectBooking = async () => {
-    if (!rejectDialog.booking || !rejectionReason) return;
-    
-    setIsSubmitting(true);
-    try {
-      await toast.promise(
-        bookingsApi.reject(rejectDialog.booking.bookingId, rejectionReason),
-        {
-          loading: "Rechazando reserva...",
-          success: "Reserva rechazada",
-          error: "Error al rechazar reserva"
-        }
-      );
-      setRejectDialog({ open: false, booking: null });
-      setRejectionReason("");
-      loadDashboard();
-    } catch {
-      // handled by toast.promise
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const formatRoleName = (roleName: string) => {
     const names: Record<string, string> = {
@@ -314,22 +255,58 @@ export default function TenantAdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Monthly bookings banner */}
-      <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-4">
-            <TrendingUp className="h-8 w-8 text-primary" />
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">
-                Reservas este mes
-              </p>
-              <p className="text-2xl font-bold">
-                {stats?.monthlyBookings ?? 0}
-              </p>
+      {/* Revenue + Monthly bookings row */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Reservas este mes
+                </p>
+                <p className="text-2xl font-bold">
+                  {stats?.monthlyBookings ?? 0}
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <DollarSign className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Ingresos este mes
+                </p>
+                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                  {formatCurrency(stats?.totalRevenueMonth ?? 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">Reservas confirmadas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <DollarSign className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Ingresos históricos
+                </p>
+                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                  {formatCurrency(stats?.totalRevenueAllTime ?? 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total acumulado</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Charts & Pending Actions Row */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -372,79 +349,6 @@ export default function TenantAdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Pending Bookings List */}
-        <Card className="col-span-1 border-amber-200 dark:border-amber-900 bg-amber-50/10 dark:bg-amber-950/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              Reservas Pendientes ({pendingBookings.length})
-            </CardTitle>
-            <CardDescription>
-              Requieren aprobación
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {pendingBookings.length === 0 ? (
-                <div className="flex items-center justify-center h-40 text-muted-foreground">
-                    <CheckCircle className="h-8 w-8 mr-2 text-green-500 opacity-50" />
-                    <p>Todo al día</p>
-                </div>
-            ) : (
-                <div className="space-y-4 max-h-[260px] overflow-y-auto pr-2">
-                    {pendingBookings.map((booking) => (
-                        <div key={booking.bookingId} className="flex flex-col gap-3 p-3 bg-background rounded-lg border shadow-sm">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="font-medium text-sm">
-                                        {booking.resource?.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {formatDate(booking.startAt)} · {formatTime(booking.startAt)}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        👤 {booking.user?.firstName} {booking.user?.lastName}
-                                    </p>
-                                    <p className="text-xs font-semibold mt-1">
-                                      {booking.originalPrice && booking.originalPrice !== booking.totalPrice ? (
-                                        <>
-                                          <span className="line-through text-muted-foreground mr-1">
-                                            {formatCurrency(booking.originalPrice, booking.currency)}
-                                          </span>
-                                          <span className="text-emerald-600 dark:text-emerald-400">
-                                            {formatCurrency(booking.totalPrice, booking.currency)}
-                                          </span>
-                                        </>
-                                      ) : (
-                                        formatCurrency(booking.totalPrice, booking.currency)
-                                      )}
-                                    </p>
-                                </div>
-                                <Badge variant="warning">Pendiente</Badge>
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                                <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    className="h-7 text-xs border-red-200 hover:bg-red-50 text-red-700 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
-                                    onClick={() => setRejectDialog({ open: true, booking })}
-                                >
-                                    Rechazar
-                                </Button>
-                                <Button 
-                                    size="sm" 
-                                    className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-                                    onClick={() => handleConfirmBooking(booking)}
-                                    disabled={isSubmitting}
-                                >
-                                    Aprobar
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Content - 2 columns */}
@@ -636,47 +540,6 @@ export default function TenantAdminDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Reject Dialog */}
-      <Dialog
-        open={rejectDialog.open}
-        onOpenChange={(open) =>
-          !open && setRejectDialog({ open: false, booking: null })
-        }
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rechazar Reserva</DialogTitle>
-            <DialogDescription>
-              Indica el motivo del rechazo. Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Motivo</Label>
-              <Textarea
-                placeholder="Ej: Mantenimiento imprevisto, horario no disponible..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRejectDialog({ open: false, booking: null })}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectBooking}
-              disabled={!rejectionReason || isSubmitting}
-            >
-              Rechazar Reserva
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

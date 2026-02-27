@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui";
-import { CalendarDays, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Logo } from "./Logo";
 
 export function PublicNavbar() {
   const { isAuthenticated } = useAuth();
@@ -15,10 +16,10 @@ export function PublicNavbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <CalendarDays className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold gradient-text">Easy Sport Book</span>
-        </Link>
+        <Logo
+          imageClassName="h-14 w-14"
+          textClassName="text-2xl"
+        />
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">

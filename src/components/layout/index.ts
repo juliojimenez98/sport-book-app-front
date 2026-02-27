@@ -8,3 +8,4 @@ export {
   BranchAdminSidebar,
 } from "./AdminSidebar";
 export { Footer } from "./Footer";
+export { Logo } from "./Logo";

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { getInitials, cn } from "@/lib/utils";
+import { Logo } from "./Logo";
 
 interface AdminSidebarProps {
   navItems: {
@@ -28,6 +29,7 @@ interface AdminSidebarProps {
     label: string;
     icon: React.ElementType;
     badge?: string;
+    exact?: boolean;
   }[];
   title: string;
   subtitle?: string;
@@ -68,12 +70,7 @@ export function AdminSidebar({
         <div className="flex h-16 items-center justify-between border-b px-4">
           {!isCollapsed && (
             <div className="flex items-center justify-between w-full">
-              <Link href="/" className="flex items-center gap-2">
-                <CalendarDays className="h-8 w-8 text-primary" />
-                <span className="text-lg font-bold gradient-text">
-                  Easy Sport Book
-                </span>
-              </Link>
+              <Logo />
               {/* Mobile Close Button */}
               <Button
                 variant="ghost"
@@ -86,7 +83,9 @@ export function AdminSidebar({
             </div>
           )}
           {isCollapsed && (
-            <CalendarDays className="h-8 w-8 text-primary mx-auto" />
+            <div className="mx-auto mt-1">
+              <Logo showText={false} />
+            </div>
           )}
         </div>
 
@@ -104,8 +103,9 @@ export function AdminSidebar({
         <nav className="flex-1 overflow-y-auto p-2">
           <ul className="space-y-1">
             {navItems.map((item) => {
-              const isActive =
-                pathname === item.href || pathname.startsWith(item.href + "/");
+              const isActive = item.exact
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <li key={item.href}>
                   <Link
@@ -218,7 +218,7 @@ export function SuperAdminSidebar({
   onClose?: () => void;
 }) {
   const navItems = [
-    { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
     {
       href: "/super-admin/tenants",
       label: "Centros Deportivos",
@@ -250,7 +250,7 @@ export function TenantAdminSidebar({
   onClose?: () => void;
 }) {
   const navItems = [
-    { href: "/tenant-admin", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/tenant-admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { href: "/tenant-admin/branches", label: "Sucursales", icon: Building2 },
     { href: "/tenant-admin/users", label: "Usuarios", icon: Users },
     { href: "/tenant-admin/discounts", label: "Descuentos", icon: Tag },
@@ -278,7 +278,7 @@ export function BranchAdminSidebar({
   onClose?: () => void;
 }) {
   const navItems = [
-    { href: "/branch-admin", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/branch-admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { href: "/branch-admin/calendar", label: "Calendario", icon: CalendarDays },
     { href: "/branch-admin/resources", label: "Canchas", icon: Activity },
     { href: "/branch-admin/hours", label: "Horarios", icon: Clock },

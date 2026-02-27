@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   title: "Easy Sport Book - Reserva canchas deportivas",
   description:
     "La plataforma líder en reservas de canchas deportivas. Reserva fácil, juega más.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

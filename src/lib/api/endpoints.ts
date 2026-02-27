@@ -27,6 +27,8 @@ import {
   Discount,
   DiscountForm,
   SurveyResponseForm,
+  UserCard,
+  CardFormInput,
 } from "@/lib/types";
 
 // ============================================
@@ -231,6 +233,9 @@ export const bookingsApi = {
 
   reject: (id: number, reason: string) =>
     api.put<Booking>(`/bookings/${id}/reject`, { reason }),
+
+  pay: (id: number, data: { cardId?: number; saveCard?: boolean; cardData?: CardFormInput }) =>
+    api.post<{ success: boolean; data: { status: string } }>(`/bookings/${id}/pay`, data),
 };
 
 // ============================================
@@ -399,4 +404,14 @@ export const discountsApi = {
 export const surveysApi = {
   submit: (data: SurveyResponseForm) =>
     api.post<any>("/public/surveys/submit", data, { skipAuth: true }),
+};
+
+// ============================================
+// Cards endpoints
+// ============================================
+
+export const cardsApi = {
+  list: () => api.get<UserCard[]>("/cards/me"),
+  add: (data: CardFormInput) => api.post<UserCard>("/cards/me", data),
+  delete: (id: number) => api.delete<void>(`/cards/me/${id}`),
 };

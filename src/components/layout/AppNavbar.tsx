@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { getInitials } from "@/lib/utils";
+import { Logo } from "./Logo";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -33,12 +34,11 @@ export function AppNavbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <CalendarDays className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold gradient-text hidden sm:inline">
-            Easy Sport Book
-          </span>
-        </Link>
+        <Logo
+          href="/dashboard"
+          imageClassName="h-14 w-14"
+          textClassName="text-2xl sm:inline"
+        />
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">

@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CalendarDays, Eye, EyeOff, Mail } from "lucide-react";
 import { useAuth } from "@/contexts";
+import { Logo } from "@/components/layout/Logo";
 import {
   Button,
   Input,
@@ -100,10 +101,11 @@ export default function LoginPage() {
   return (
     <Card className="border-0 shadow-xl">
       <CardHeader className="text-center">
-        <Link href="/" className="flex items-center justify-center gap-2 mb-4">
-          <CalendarDays className="h-10 w-10 text-primary" />
-          <span className="text-2xl font-bold gradient-text">Easy Sport Book</span>
-        </Link>
+        <Logo
+          className="justify-center mb-4"
+          imageClassName="h-16 w-16"
+          textClassName="text-3xl"
+        />
         <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
         <CardDescription>
           Ingresa tus credenciales para acceder a tu cuenta
