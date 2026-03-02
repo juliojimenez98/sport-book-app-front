@@ -32,6 +32,7 @@ import { Tenant, Branch } from "@/lib/types";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
 import { getAssetUrl } from "@/lib/api/endpoints";
 import { ImageGallery } from "@/components/ui/image-gallery";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 // Amenities configuration
 const AMENITIES = [
@@ -131,7 +132,7 @@ export default function TenantPage() {
           <div className="max-w-4xl mx-auto text-center">
             {tenant.logoUrl && (
               <div className="h-20 w-20 mx-auto mb-6 rounded-lg overflow-hidden relative shadow-sm">
-                <img
+                <ImageWithFallback
                   src={getAssetUrl(tenant.logoUrl)}
                   alt={tenant.name}
                   className="absolute inset-0 w-full h-full object-cover"

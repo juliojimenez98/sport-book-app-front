@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, X, ImageIcon, Maximize2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { cn } from "@/lib/utils";
 
 interface ImageGalleryProps {
@@ -52,7 +53,7 @@ export function ImageGallery({ images, alt = "Image", fallbackIcon, hideThumbnai
         className="relative w-full h-full bg-muted overflow-hidden group cursor-pointer"
         onClick={openMainImage}
       >
-        <img
+        <ImageWithFallback
           src={images[0]} // Always show the first image natively as the cover
           alt={`${alt} cover`}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -100,7 +101,7 @@ export function ImageGallery({ images, alt = "Image", fallbackIcon, hideThumbnai
                 "relative h-20 w-32 shrink-0 rounded-md overflow-hidden bg-muted snap-start ring-offset-1 ring-offset-background transition-all hover:opacity-90",
               )}
             >
-              <img
+              <ImageWithFallback
                 src={img}
                 alt={`${alt} thumbnail ${idx + 1}`}
                 className="w-full h-full object-cover"
@@ -134,9 +135,10 @@ export function ImageGallery({ images, alt = "Image", fallbackIcon, hideThumbnai
           </div>
 
           <div className="relative flex-1 flex items-center justify-center w-full h-full pt-10 pb-20 px-4 sm:px-12 object-contain">
-            <img
+            <ImageWithFallback
               src={images[selectedIndex]}
               alt={`${alt} expanded ${selectedIndex + 1}`}
+              containerClassName="w-full h-full max-h-full flex items-center justify-center bg-transparent"
               className="max-w-full max-h-full object-contain select-none animate-in fade-in zoom-in-95 duration-200"
               key={selectedIndex} // Force re-render for animation on change
             />
@@ -185,7 +187,7 @@ export function ImageGallery({ images, alt = "Image", fallbackIcon, hideThumbnai
                           : "opacity-40 hover:opacity-80"
                       )}
                     >
-                      <img
+                      <ImageWithFallback
                         src={img}
                         alt={`Modal thumbnail ${idx + 1}`}
                         className="w-full h-full object-cover"

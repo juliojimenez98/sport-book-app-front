@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { UploadCloud, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { uploadApi, getAssetUrl } from "@/lib/api/endpoints";
 import { Button } from "./button";
+import { ImageWithFallback } from "./image-with-fallback";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 
@@ -67,7 +68,7 @@ export function ImageUpload({ value, onChange, folder = "general", className }: 
         </div>
       ) : value ? (
         <div className="relative w-full h-full group z-10">
-          <img
+          <ImageWithFallback
             src={getAssetUrl(value)}
             alt="Upload"
             className="w-full h-full object-cover"

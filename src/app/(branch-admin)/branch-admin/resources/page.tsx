@@ -40,6 +40,7 @@ import { useAuth } from "@/contexts";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { getAssetUrl } from "@/lib/api/endpoints";
 import { ImageGallery } from "@/components/ui/image-gallery";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 export default function BranchResourcesPage() {
   const { getBranchId } = useAuth();
@@ -244,7 +245,7 @@ export default function BranchResourcesPage() {
             <Card key={resource.resourceId} className="overflow-hidden">
               <div className="h-40 relative bg-muted flex items-center justify-center">
                   {resource.images && resource.images.length > 0 ? (
-                    <img
+                    <ImageWithFallback
                       src={getAssetUrl(resource.images[0].imageUrl)}
                       alt={resource.name}
                       className="absolute inset-0 w-full h-full object-cover"

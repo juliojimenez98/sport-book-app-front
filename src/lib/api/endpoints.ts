@@ -295,6 +295,9 @@ export const usersApi = {
     phone?: string;
     branchId?: number;
   }) => api.post<{ id: number; email: string; assignedRole: string }>("/users", data),
+
+  updateProfile: (data: { firstName?: string; lastName?: string; phone?: string; address?: string }) =>
+    api.patch<UserProfile>("/auth/me", data),
 };
 
 // ============================================

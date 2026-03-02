@@ -19,6 +19,7 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { CardForm } from "@/components/payment/CardForm";
 import { SuccessModal } from "@/components/payment/SuccessModal";
+import { AddressRequiredModal } from "@/components/ui/address-required-modal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +44,7 @@ function CheckoutContent() {
   const [pricePreview, setPricePreview] = useState<{ originalPrice: number; totalPrice: number; discount: Discount | null } | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -139,7 +141,13 @@ function CheckoutContent() {
       
       toast.success("¡Reserva realizada con éxito!");
     } catch (error: any) {
-      toast.error(error.message || "Error al realizar la reserva");
+      // If backend says address is required, open the modal instead of a generic toast
+      const msg: string = error?.message || "";
+      if (msg.toLowerCase().includes("dirección") || msg.toLowerCase().includes("direccion") || msg.toLowerCase().includes("address")) {
+        setAddressModalOpen(true);
+      } else {
+        toast.error(msg || "Error al realizar la reserva");
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -321,6 +329,13 @@ function CheckoutContent() {
           booking={createdBooking} 
         />
       )}
+
+      {/* Address required — fires when backend rejects booking due to missing address */}
+      <AddressRequiredModal
+        open={addressModalOpen}
+        onOpenChange={setAddressModalOpen}
+        onSuccess={handlePayment}
+      />
     </div>
   );
 }

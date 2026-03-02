@@ -62,6 +62,7 @@ export interface Tenant {
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
+  requiresAddress?: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -98,6 +99,7 @@ export interface Branch {
   amenitiesDescription?: string;
   // Booking settings
   requiresApproval: boolean;
+  requiresAddress: boolean;
   // Status
   isActive: boolean;
   createdAt: string;
@@ -245,6 +247,7 @@ export interface UserProfile {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  address?: string;
   isActive: boolean;
   createdAt: string;
   roles?: UserRole[];
@@ -423,6 +426,7 @@ export interface TenantForm {
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
+  requiresAddress?: boolean;
 }
 
 export interface BranchForm {
@@ -447,6 +451,7 @@ export interface BranchForm {
   hasEquipmentRental?: boolean;
   amenitiesDescription?: string;
   requiresApproval?: boolean;
+  requiresAddress?: boolean;
 }
 
 export interface ResourceForm {

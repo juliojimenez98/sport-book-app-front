@@ -33,6 +33,7 @@ import { publicApi, getAssetUrl } from "@/lib/api/endpoints";
 import { Tenant, Branch, Resource } from "@/lib/types";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
 import { formatCurrency } from "@/lib/utils";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 // Amenities configuration
 const AMENITIES = [
@@ -218,7 +219,7 @@ export default function BranchPage() {
                 >
                   {resource.images && resource.images.length > 0 ? (
                     <div className="h-40 w-full relative bg-muted">
-                      <img
+                      <ImageWithFallback
                         src={getAssetUrl(resource.images[0].imageUrl)}
                         alt={resource.name}
                         className="absolute inset-0 w-full h-full object-cover"

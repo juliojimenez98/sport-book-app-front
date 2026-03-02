@@ -7,8 +7,6 @@ import {
   MapPin,
   Clock,
   Shield,
-  Star,
-  Users,
   Building2,
   ArrowRight,
 } from "lucide-react";
@@ -21,6 +19,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { Footer } from "@/components/layout/Footer";
 import { publicApi, getAssetUrl } from "@/lib/api/endpoints";
@@ -51,29 +50,6 @@ const features = [
   },
 ];
 
-const testimonials = [
-  {
-    name: "Carlos Rodríguez",
-    role: "Jugador Amateur",
-    content:
-      "Excelente plataforma! Ahora puedo reservar mi cancha de fútbol en minutos.",
-    rating: 5,
-  },
-  {
-    name: "María González",
-    role: "Coordinadora de Equipos",
-    content:
-      "Facilita mucho la organización de partidos para nuestro equipo de pádel.",
-    rating: 5,
-  },
-  {
-    name: "Juan Martínez",
-    role: "Entrenador",
-    content:
-      "La mejor herramienta para gestionar las reservas de mis clases de tenis.",
-    rating: 5,
-  },
-];
 
 export default function HomePage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -219,10 +195,11 @@ export default function HomePage() {
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
                               {tenant.logoUrl ? (
-                                <img
+                                <ImageWithFallback
                                   src={getAssetUrl(tenant.logoUrl)}
                                   alt={tenant.name}
-                                  className="h-10 w-10 rounded-lg object-contain"
+                                  containerClassName="h-10 w-10 shrink-0 rounded-lg"
+                                  className="object-contain"
                                 />
                               ) : (
                                 <div
@@ -266,76 +243,74 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="py-16 bg-primary text-primary-foreground">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              <div>
-                <div className="text-4xl font-bold mb-2">500+</div>
-                <div className="text-primary-foreground/80">
-                  Canchas Disponibles
-                </div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold mb-2">50+</div>
-                <div className="text-primary-foreground/80">Sucursales</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold mb-2">10k+</div>
-                <div className="text-primary-foreground/80">
-                  Usuarios Activos
-                </div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold mb-2">25k+</div>
-                <div className="text-primary-foreground/80">
-                  Reservas al Mes
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials Section */}
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Lo que dicen nuestros usuarios
+        {/* How it Works Section */}
+        <section id="como-funciona" className="py-24 bg-muted/20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-linear-to-b from-transparent via-primary/5 to-transparent pointer-events-none" />
+          <div className="container mx-auto px-4 relative">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
+                ¿Cómo funciona?
               </h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                Miles de deportistas ya confían en nuestra plataforma
+              <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto">
+                Tu próxima partida está a solo unos clics de distancia. Así de fácil es usar Easy Sport Book.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {testimonials.map((testimonial, index) => (
-                <Card key={index} className="border shadow-md">
-                  <CardContent className="p-6">
-                    <div className="flex gap-1 mb-4">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className="h-5 w-5 fill-yellow-400 text-yellow-400"
-                        />
-                      ))}
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {/* Step 1 */}
+              <div className="group relative">
+                <div className="absolute top-8 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/40 to-transparent hidden md:block" />
+                <Card className="border-none bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
+                  <CardContent className="p-8 text-center flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-inner">
+                      <span className="text-2xl font-bold text-primary group-hover:text-primary-foreground">1</span>
                     </div>
-                    <p className="text-muted-foreground mb-4">
-                      &ldquo;{testimonial.content}&rdquo;
+                    <h3 className="font-bold text-xl mb-3">Busca y Explora</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Encuentra los mejores centros deportivos de la ciudad, filtra por tu deporte favorito y revisa la disponibilidad.
                     </p>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-semibold">{testimonial.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {testimonial.role}
-                        </div>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
-              ))}
+              </div>
+
+              {/* Step 2 */}
+              <div className="group relative">
+                <div className="absolute top-8 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/40 to-transparent hidden md:block" />
+                <Card className="border-none bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
+                  <CardContent className="p-8 text-center flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-inner">
+                      <span className="text-2xl font-bold text-primary group-hover:text-primary-foreground">2</span>
+                    </div>
+                    <h3 className="font-bold text-xl mb-3">Elige tu Horario</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Selecciona la cancha perfecta, el día y la hora que más te acomoda de forma rápida e intuitiva.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Step 3 */}
+              <div className="group relative">
+                <Card className="border-none bg-background/50 backdrop-blur-sm shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
+                  <CardContent className="p-8 text-center flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-inner">
+                      <span className="text-2xl font-bold text-primary group-hover:text-primary-foreground">3</span>
+                    </div>
+                    <h3 className="font-bold text-xl mb-3">Reserva y Juega</h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Confirma tu reserva con pago seguro. ¡Alista tu equipo y prepárate para disfrutar en la cancha!
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            
+            <div className="mt-16 text-center">
+              <Button size="lg" className="px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-primary/25 transition-all" asChild>
+                <Link href="/browse">
+                  Comienza a Reservar <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>

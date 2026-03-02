@@ -16,6 +16,7 @@ import {
   Label,
   Skeleton,
   Badge,
+  Switch,
 } from "@/components/ui";
 import { tenantsApi } from "@/lib/api";
 import { Tenant } from "@/lib/types";
@@ -36,6 +37,7 @@ const tenantSettingsSchema = z.object({
   secondaryColor: z.string().optional(),
   accentColor: z.string().optional(),
   images: z.array(z.string()).optional(),
+  requiresAddress: z.boolean().optional(),
 });
 
 type TenantSettingsFormData = z.infer<typeof tenantSettingsSchema>;
@@ -92,6 +94,7 @@ export default function TenantSettingsPage() {
         phone: data.phone || "",
         logoUrl: data.logoUrl || "",
         images: data.images?.map((img) => img.imageUrl) || [],
+        requiresAddress: data.requiresAddress || false,
       });
       setPrimaryColor(data.primaryColor || DEFAULT_COLORS.primary);
       setSecondaryColor(data.secondaryColor || DEFAULT_COLORS.secondary);
@@ -113,6 +116,7 @@ export default function TenantSettingsPage() {
         primaryColor: primaryColor || undefined,
         secondaryColor: secondaryColor || undefined,
         accentColor: accentColor || undefined,
+        requiresAddress: data.requiresAddress,
       };
 
       await toast.promise(tenantsApi.update(tenant.tenantId, submitData), {
@@ -338,6 +342,32 @@ export default function TenantSettingsPage() {
                    <div className="flex-1" style={{ backgroundColor: accentColor }} />
                  </div>
                </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuración de Reservas</CardTitle>
+            <CardDescription>
+              Aplica a todas las sucursales de este centro deportivo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="requiresAddress" className="text-base font-medium cursor-pointer">
+                  Requerir dirección del usuario
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Los usuarios deberán registrar su dirección antes de reservar en cualquier sucursal de este centro.
+                </p>
+              </div>
+              <Switch
+                id="requiresAddress"
+                checked={!!watch("requiresAddress")}
+                onCheckedChange={(checked) => setValue("requiresAddress", !!checked)}
+              />
             </div>
           </CardContent>
         </Card>

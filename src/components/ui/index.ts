@@ -36,3 +36,4 @@ export {
 export { Badge, badgeVariants } from "./badge";
 export { Skeleton } from "./skeleton";
 export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
+export { ImageWithFallback } from "./image-with-fallback";

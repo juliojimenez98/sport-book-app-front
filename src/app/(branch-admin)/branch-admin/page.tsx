@@ -17,7 +17,7 @@ import {
   Label,
   Textarea,
 } from "@/components/ui";
-import { CalendarDays, Activity, Users, Clock, CheckCircle, XCircle } from "lucide-react";
+import { CalendarDays, Activity, Users, Clock, CheckCircle, XCircle, MapPin } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { branchesApi, bookingsApi } from "@/lib/api";
 import { BranchDashboardStats, Booking } from "@/lib/types";
@@ -203,6 +203,12 @@ export default function BranchAdminDashboardPage() {
                       <p className="text-xs text-muted-foreground mt-1">
                         👤 {booking.user?.firstName} {booking.user?.lastName}
                       </p>
+                      {booking.user?.address && (
+                        <div className="flex items-start gap-1 mt-0.5 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                          <span className="line-clamp-2">{booking.user.address}</span>
+                        </div>
+                      )}
                       <p className="text-xs font-semibold mt-1">
                         {formatCurrency(booking.totalPrice, booking.currency)}
                       </p>
@@ -267,6 +273,12 @@ export default function BranchAdminDashboardPage() {
                           {booking.user?.firstName} {booking.user?.lastName}
                         </span>
                       </div>
+                      {booking.user?.address && (
+                        <div className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
+                          <span className="line-clamp-1">{booking.user.address}</span>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Badge variant={

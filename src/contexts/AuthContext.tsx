@@ -26,6 +26,7 @@ interface AuthContextType {
   register: (data: RegisterForm) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
+  updateUser: (updates: Partial<UserProfile>) => void;
   hasRole: (
     role: RoleName,
     scope?: RoleScope,
@@ -124,6 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateUser = useCallback((updates: Partial<UserProfile>) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : prev));
+  }, []);
+
   const hasRole = useCallback(
     (
       role: RoleName,
@@ -188,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     refreshSession,
+    updateUser,
     hasRole,
     isSuperAdmin,
     getTenantId,

@@ -40,6 +40,8 @@ const branchSettingsSchema = z.object({
   hasEquipmentRental: z.boolean().optional(),
   amenitiesDescription: z.string().optional(),
   images: z.array(z.string()).optional(),
+  requiresApproval: z.boolean().optional(),
+  requiresAddress: z.boolean().optional(),
 });
 
 type BranchSettingsFormData = z.infer<typeof branchSettingsSchema>;
@@ -91,6 +93,8 @@ export default function BranchSettingsPage() {
         hasEquipmentRental: data.hasEquipmentRental || false,
         amenitiesDescription: data.amenitiesDescription || "",
         images: data.images?.map((img) => img.imageUrl) || [],
+        requiresApproval: data.requiresApproval || false,
+        requiresAddress: data.requiresAddress || false,
       });
     } catch (error) {
       console.error("Error loading branch:", error);
@@ -307,6 +311,47 @@ export default function BranchSettingsPage() {
                 {...register("amenitiesDescription")}
                 placeholder="Describe otros servicios o detalles importantes..."
                 className="h-32"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuración de Reservas</CardTitle>
+            <CardDescription>
+              Controla cómo se gestionan las reservas en esta sucursal.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="requiresApproval" className="text-base font-medium cursor-pointer">
+                  Requerir aprobación manual
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Las reservas quedarán pendientes hasta que un administrador las confirme.
+                </p>
+              </div>
+              <Switch
+                id="requiresApproval"
+                checked={!!watch("requiresApproval")}
+                onCheckedChange={(checked) => setValue("requiresApproval", !!checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="requiresAddress" className="text-base font-medium cursor-pointer">
+                  Requerir dirección del usuario
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Los usuarios deberán registrar su dirección antes de poder reservar en esta sucursal.
+                </p>
+              </div>
+              <Switch
+                id="requiresAddress"
+                checked={!!watch("requiresAddress")}
+                onCheckedChange={(checked) => setValue("requiresAddress", !!checked)}
               />
             </div>
           </CardContent>

@@ -32,6 +32,7 @@ import {
   XCircle,
   User,
   Mail,
+  MapPin,
 } from "lucide-react";
 import {
   cn,
@@ -1049,6 +1050,12 @@ export default function TenantBranchCalendarPage() {
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span>{clientEmail}</span>
+                      </div>
+                    )}
+                    {b.user?.address && (
+                      <div className="flex items-start gap-2 pt-1">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <span className="line-clamp-2">{b.user.address}</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2 pt-1">

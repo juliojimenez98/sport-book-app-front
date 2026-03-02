@@ -47,6 +47,7 @@ import { formatCurrency, formatDate, cn, generateTimeSlots } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenantTheme } from "@/components/TenantThemeProvider";
 import { ImageGallery } from "@/components/ui/image-gallery";
+import { AddressRequiredModal } from "@/components/ui/address-required-modal";
 
 // Amenities configuration
 const AMENITIES = [
@@ -90,6 +91,7 @@ export default function ResourceDetailPage() {
   
   const [booking, setBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<{ status: string } | null>(null);
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
 
   // Calendar Discounts
   const [calendarDiscounts, setCalendarDiscounts] = useState<CalendarResponse["discounts"]>([]);
@@ -334,33 +336,41 @@ export default function ResourceDetailPage() {
       return;
     }
 
-    try {
-      setBooking(true);
-      const dateStr = selectedSlot.date;
-      const [hours, minutes] = selectedSlot.time.split(":").map(Number);
-      const endDate = new Date(currentWeekDate);
-      endDate.setHours(hours, minutes + (resource.slotMinutes || 60), 0, 0);
-      const endStr = endDate.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
-      const paramsForCheckout = new URLSearchParams({
-        resourceId: resource.resourceId.toString(),
-        startAt: `${dateStr}T${selectedSlot.time}:00`,
-        endAt: `${dateStr}T${endStr}:00`,
-      });
-
-      if (pricePreview?.discount?.code) {
-        paramsForCheckout.append("discountCode", pricePreview.discount.code);
-      }
-
-      router.push(`/${tenantSlug}/${branchSlug}/checkout?${paramsForCheckout.toString()}`);
-    } catch (error) {
-      console.error("Error in handleBooking:", error);
-    } finally {
-      setBooking(false);
+    // If branch or tenant requires address and user doesn't have one, prompt
+    const needsAddress =
+      resource.branch?.requiresAddress ||
+      resource.branch?.tenant?.requiresAddress;
+    if (needsAddress && !user.address) {
+      setAddressModalOpen(true);
+      return;
     }
+
+    proceedWithBooking();
+  };
+
+  const proceedWithBooking = () => {
+    if (!selectedSlot || !resource) return;
+
+    const dateStr = selectedSlot.date;
+    const [hours, minutes] = selectedSlot.time.split(":").map(Number);
+    const endDate = new Date(currentWeekDate);
+    endDate.setHours(hours, minutes + (resource.slotMinutes || 60), 0, 0);
+    const endStr = endDate.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const paramsForCheckout = new URLSearchParams({
+      resourceId: resource.resourceId.toString(),
+      startAt: `${dateStr}T${selectedSlot.time}:00`,
+      endAt: `${dateStr}T${endStr}:00`,
+    });
+
+    if (pricePreview?.discount?.code) {
+      paramsForCheckout.append("discountCode", pricePreview.discount.code);
+    }
+
+    router.push(`/${tenantSlug}/${branchSlug}/checkout?${paramsForCheckout.toString()}`);
   };
 
   const getBranchAmenities = () => {
@@ -903,6 +913,13 @@ export default function ResourceDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Address Required Modal */}
+      <AddressRequiredModal
+        open={addressModalOpen}
+        onOpenChange={setAddressModalOpen}
+        onSuccess={proceedWithBooking}
+      />
     </div>
   );
 }

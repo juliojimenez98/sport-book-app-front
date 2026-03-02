@@ -43,6 +43,7 @@ import { Resource, Sport, Branch, ResourceForm } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { getAssetUrl } from "@/lib/api/endpoints";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 export default function TenantBranchResourcesPage() {
   const params = useParams();
@@ -254,7 +255,7 @@ export default function TenantBranchResourcesPage() {
             <Card key={resource.resourceId} className="overflow-hidden">
               <div className="h-40 relative bg-muted flex items-center justify-center">
                   {resource.images && resource.images.length > 0 ? (
-                    <img
+                    <ImageWithFallback
                       src={getAssetUrl(resource.images[0].imageUrl)}
                       alt={resource.name}
                       className="absolute inset-0 w-full h-full object-cover"

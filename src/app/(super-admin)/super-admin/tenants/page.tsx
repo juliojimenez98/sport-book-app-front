@@ -41,6 +41,7 @@ import { Tenant, TenantForm } from "@/lib/types";
 import { formatDate, slugify } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { getAssetUrl } from "@/lib/api/endpoints";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 const tenantSchema = z.object({
   name: z.string().min(2, "Mínimo 2 caracteres"),
@@ -265,7 +266,7 @@ export default function TenantsPage() {
                   <div className="flex items-center gap-4">
                     {tenant.logoUrl || (tenant.images && tenant.images.length > 0) ? (
                       <div className="h-12 w-12 shrink-0 rounded-lg overflow-hidden relative bg-muted flex items-center justify-center">
-                        <img 
+                        <ImageWithFallback 
                           src={getAssetUrl(tenant.logoUrl || tenant.images?.[0]?.imageUrl || "")}
                           alt={tenant.name || "Tenant Logo"}
                           className="absolute inset-0 w-full h-full object-cover"
