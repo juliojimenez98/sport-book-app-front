@@ -21,14 +21,13 @@ import { CalendarDays, Activity, Users, Clock, CheckCircle, XCircle, MapPin } fr
 import { useState, useEffect, useCallback } from "react";
 import { branchesApi, bookingsApi } from "@/lib/api";
 import { BranchDashboardStats, Booking } from "@/lib/types";
-import { useAuth } from "@/contexts";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import { toast } from "@/lib/toast";
 import { formatDate, formatTime, formatCurrency } from "@/lib/utils";
 
 export default function BranchAdminDashboardPage() {
   const { user } = useAuth();
-  const branchRole = user?.roles?.find((r) => r.branchId);
-  const branchId = branchRole?.branchId;
+  const { selectedBranchId } = useTenantSwitcher();
 
   const [stats, setStats] = useState<BranchDashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,10 +40,10 @@ export default function BranchAdminDashboardPage() {
   const [rejectionReason, setRejectionReason] = useState("");
 
   const loadDashboard = useCallback(async () => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
     setIsLoading(true);
     try {
-      const res = await branchesApi.getDashboardStats(branchId);
+      const res = await branchesApi.getDashboardStats(selectedBranchId);
       setStats(res as unknown as BranchDashboardStats);
     } catch (error) {
       console.error("Error fetching branch stats", error);
@@ -52,7 +51,7 @@ export default function BranchAdminDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [branchId]);
+  }, [selectedBranchId]);
 
   useEffect(() => {
     loadDashboard();

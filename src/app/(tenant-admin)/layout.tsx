@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { RequireAuth, RequireRole } from "@/components/auth";
-import { TenantAdminSidebar } from "@/components/layout";
+import { TenantAdminSidebar, TenantSwitcher } from "@/components/layout";
 import { TenantThemeProvider } from "@/components/TenantThemeProvider";
 import { RoleName, RoleScope, Tenant } from "@/lib/types";
-import { useAuth } from "@/contexts";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import { tenantsApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
@@ -17,30 +17,19 @@ export default function TenantAdminLayout({
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
+  const { selectedTenantId } = useTenantSwitcher();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Get tenant info from user's role
-  const tenantRole = user?.roles?.find((r) => {
-    const roleName = r.roleName || r.role?.name;
-    return (
-      roleName === RoleName.TENANT_ADMIN &&
-      (r.scope === RoleScope.TENANT || r.tenantId)
-    );
-  });
-  const tenantName = tenantRole?.tenant?.name;
-  const tenantId = tenantRole?.tenantId;
-
   // Load full tenant data (including colors)
   useEffect(() => {
-    if (tenantId) {
+    if (selectedTenantId) {
       tenantsApi
-        .get(tenantId)
+        .get(selectedTenantId)
         .then((data) => setTenant(data))
         .catch(() => setTenant(null));
     }
-  }, [tenantId]);
-
+  }, [selectedTenantId]);
   return (
     <RequireAuth>
       <RequireRole roles={[RoleName.TENANT_ADMIN, RoleName.SUPER_ADMIN]}>
@@ -58,13 +47,14 @@ export default function TenantAdminLayout({
                   <Menu className="h-6 w-6" />
                 </Button>
                 <span className="font-semibold text-lg truncate max-w-[200px]">
-                  {tenant?.name || tenantName || "Panel"}
+                  {tenant?.name || "Panel Centro Deportivo"}
                 </span>
               </div>
             </header>
 
             <TenantAdminSidebar 
-              tenantName={tenant?.name || tenantName} 
+              tenantName={tenant?.name} 
+              titleSlot={<TenantSwitcher isCollapsed={false} />}
               isOpen={isMobileMenuOpen}
               onClose={() => setIsMobileMenuOpen(false)}
             />

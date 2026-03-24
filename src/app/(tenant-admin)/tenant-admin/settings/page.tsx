@@ -21,7 +21,7 @@ import {
 import { tenantsApi } from "@/lib/api";
 import { Tenant } from "@/lib/types";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 
 const tenantSettingsSchema = z.object({
   name: z.string().min(2, "Mínimo 2 caracteres").optional(),
@@ -49,7 +49,8 @@ const DEFAULT_COLORS = {
 };
 
 export default function TenantSettingsPage() {
-  const { user, getTenantId } = useAuth();
+  const { user } = useAuth();
+  const { selectedTenantId } = useTenantSwitcher();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,13 +76,11 @@ export default function TenantSettingsPage() {
   const logoUrlValue = watch("logoUrl");
   const imagesValue = watch("images") || [];
 
-  const tenantId = getTenantId();
-
   useEffect(() => {
-    if (tenantId) {
-      loadTenant(tenantId);
+    if (selectedTenantId) {
+      loadTenant(selectedTenantId);
     }
-  }, [tenantId]);
+  }, [selectedTenantId]);
 
   const loadTenant = async (id: number) => {
     try {

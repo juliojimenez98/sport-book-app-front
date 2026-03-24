@@ -18,6 +18,7 @@ import {
   Clock,
   X,
   Tag,
+  GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
 import { getInitials, cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ interface AdminSidebarProps {
   }[];
   title: string;
   subtitle?: string;
+  titleSlot?: React.ReactNode;
   isOpen?: boolean;
   onClose?: () => void;
 }
@@ -41,6 +43,7 @@ export function AdminSidebar({
   navItems,
   title,
   subtitle,
+  titleSlot,
   isOpen,
   onClose,
 }: AdminSidebarProps) {
@@ -91,10 +94,16 @@ export function AdminSidebar({
 
         {/* Title Section */}
         {!isCollapsed && (
-          <div className="border-b px-4 py-3">
-            <h2 className="font-semibold text-sm">{title}</h2>
-            {subtitle && (
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
+          <div className="border-b px-4 py-3 min-h-[64px] flex items-center">
+            {titleSlot ? (
+              titleSlot
+            ) : (
+              <div className="w-full">
+                <h2 className="font-semibold text-sm">{title}</h2>
+                {subtitle && (
+                  <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -242,10 +251,12 @@ export function SuperAdminSidebar({
 
 export function TenantAdminSidebar({
   tenantName,
+  titleSlot,
   isOpen,
   onClose,
 }: {
   tenantName?: string;
+  titleSlot?: React.ReactNode;
   isOpen?: boolean;
   onClose?: () => void;
 }) {
@@ -262,6 +273,7 @@ export function TenantAdminSidebar({
       navItems={navItems}
       title="Admin Centro Deportivo"
       subtitle={tenantName}
+      titleSlot={titleSlot}
       isOpen={isOpen}
       onClose={onClose}
     />
@@ -270,10 +282,12 @@ export function TenantAdminSidebar({
 
 export function BranchAdminSidebar({
   branchName,
+  titleSlot,
   isOpen,
   onClose,
 }: {
   branchName?: string;
+  titleSlot?: React.ReactNode;
   isOpen?: boolean;
   onClose?: () => void;
 }) {
@@ -281,6 +295,7 @@ export function BranchAdminSidebar({
     { href: "/branch-admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { href: "/branch-admin/calendar", label: "Calendario", icon: CalendarDays },
     { href: "/branch-admin/resources", label: "Canchas", icon: Activity },
+    { href: "/branch-admin/classes", label: "Clases", icon: GraduationCap },
     { href: "/branch-admin/hours", label: "Horarios", icon: Clock },
     { href: "/branch-admin/discounts", label: "Descuentos", icon: Tag },
     { href: "/branch-admin/settings", label: "Configuración", icon: Settings },
@@ -291,6 +306,7 @@ export function BranchAdminSidebar({
       navItems={navItems}
       title="Admin Sucursal"
       subtitle={branchName}
+      titleSlot={titleSlot}
       isOpen={isOpen}
       onClose={onClose}
     />

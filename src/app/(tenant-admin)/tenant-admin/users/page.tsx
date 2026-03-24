@@ -32,7 +32,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { usersApi, branchesApi } from "@/lib/api";
-import { useAuth } from "@/contexts";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import { UserProfile, Role, Branch, RoleName, RoleScope } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
@@ -40,6 +40,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 export default function TenantUsersPage() {
   const { user: currentUser } = useAuth();
+  const { selectedTenantId } = useTenantSwitcher();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -73,21 +74,11 @@ export default function TenantUsersPage() {
   });
   const [isCreating, setIsCreating] = useState(false);
 
-  // Get tenant ID from current user's role
-  const tenantRole = currentUser?.roles?.find((r) => {
-    const roleName = r.roleName || r.role?.name;
-    return (
-      roleName === RoleName.TENANT_ADMIN &&
-      (r.scope === RoleScope.TENANT || r.tenantId)
-    );
-  });
-  const tenantId = tenantRole?.tenantId;
-
   const loadInitialData = useCallback(async () => {
     try {
       const [rolesResponse, branchesResponse] = await Promise.all([
         usersApi.getRoles(),
-        branchesApi.list(),
+        branchesApi.list(selectedTenantId ? { tenantId: selectedTenantId } : undefined),
       ]);
 
       const rolesList = Array.isArray(rolesResponse) ? rolesResponse : [];
@@ -104,10 +95,10 @@ export default function TenantUsersPage() {
     } catch (error) {
       console.error("Error loading initial data:", error);
     }
-  }, []);
+  }, [selectedTenantId]);
 
   const loadUsers = useCallback(async () => {
-    if (!tenantId) return;
+    if (!selectedTenantId) return;
 
     setIsLoading(true);
     try {
@@ -116,8 +107,8 @@ export default function TenantUsersPage() {
       const response = await usersApi.list({
         page: currentPage,
         limit: pageSize,
-        search: searchDebounce || undefined,
-        tenantId: searchDebounce ? undefined : tenantId,
+        // Assuming usersApi.list takes tenantId not branchId based on previous implementation
+        tenantId: searchDebounce ? undefined : selectedTenantId,
       });
 
       if (Array.isArray(response)) {
@@ -140,7 +131,7 @@ export default function TenantUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, pageSize, searchDebounce, tenantId]);
+  }, [currentPage, pageSize, searchDebounce, selectedTenantId]);
 
   // Debounce search
   useEffect(() => {
@@ -167,7 +158,7 @@ export default function TenantUsersPage() {
   };
 
   const handleAssignRole = async () => {
-    if (!selectedUser || !selectedRoleId || !selectedBranchId || !tenantId)
+    if (!selectedUser || !selectedRoleId || !selectedBranchId || !selectedTenantId)
       return;
 
     setIsSubmitting(true);
@@ -176,7 +167,7 @@ export default function TenantUsersPage() {
         usersApi.assignRole(selectedUser.userId, {
           roleId: parseInt(selectedRoleId),
           scope: "branch",
-          tenantId: tenantId,
+          tenantId: selectedTenantId,
           branchId: parseInt(selectedBranchId),
         }),
         {

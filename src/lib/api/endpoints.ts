@@ -29,6 +29,10 @@ import {
   SurveyResponseForm,
   UserCard,
   CardFormInput,
+  SportClass,
+  ClassEnrollment,
+  ClassForm,
+  RecurringClassForm,
 } from "@/lib/types";
 
 // ============================================
@@ -98,7 +102,10 @@ export const tenantsApi = {
 // ============================================
 
 export const branchesApi = {
-  list: () => api.get<Branch[]>("/branches"),
+  list: (params?: { tenantId?: number }) => {
+    const query = params?.tenantId ? `?tenantId=${params.tenantId}` : "";
+    return api.get<Branch[]>(`/branches${query}`);
+  },
 
   get: (id: number) => api.get<Branch>(`/branches/${id}`),
 
@@ -329,6 +336,8 @@ export const publicApi = {
 
   getLocations: () => api.get<LocationsData>("/public/locations", { skipAuth: true }),
 
+  getRegions: () => api.get<any[]>("/public/regions", { skipAuth: true }),
+
   getBranchResources: (branchId: number) =>
     api.get<Resource[]>(`/public/branches/${branchId}/resources`, {
       skipAuth: true,
@@ -417,4 +426,58 @@ export const cardsApi = {
   list: () => api.get<UserCard[]>("/cards/me"),
   add: (data: CardFormInput) => api.post<UserCard>("/cards/me", data),
   delete: (id: number) => api.delete<void>(`/cards/me/${id}`),
+};
+
+// ============================================
+// Classes (Sport Classes) endpoints
+// ============================================
+
+export const classesApi = {
+  // Public
+  getByBranch: (branchId: number, params?: { sportId?: number; upcoming?: boolean }) => {
+    const q = new URLSearchParams();
+    if (params?.sportId) q.set("sportId", params.sportId.toString());
+    if (params?.upcoming === false) q.set("upcoming", "false");
+    const query = q.toString();
+    return api.get<SportClass[]>(
+      `/branches/${branchId}/classes${query ? `?${query}` : ""}`,
+      { skipAuth: true },
+    );
+  },
+
+  get: (id: number) =>
+    api.get<SportClass>(`/classes/${id}`, { skipAuth: true }),
+
+  // Admin
+  create: (branchId: number, data: ClassForm) =>
+    api.post<SportClass>(`/branches/${branchId}/classes`, data),
+
+  update: (id: number, data: Partial<ClassForm> & { isActive?: boolean }) =>
+    api.put<SportClass>(`/classes/${id}`, data),
+
+  delete: (id: number) => api.delete<void>(`/classes/${id}`),
+
+  getEnrollments: (classId: number) =>
+    api.get<{ class: SportClass; enrollments: ClassEnrollment[] }>(
+      `/classes/${classId}/enrollments`,
+    ),
+
+  // Client
+  enroll: (classId: number) =>
+    api.post<{ message: string; enrollment: ClassEnrollment; spotsLeft: number }>(
+      `/classes/${classId}/enroll`,
+      {},
+    ),
+
+  cancelEnrollment: (classId: number) =>
+    api.delete<{ message: string; spotsLeft: number }>(`/classes/${classId}/enroll`),
+
+  getMyEnrollments: () =>
+    api.get<ClassEnrollment[]>("/me/enrollments"),
+
+  createBulk: (branchId: number, data: RecurringClassForm) =>
+    api.post<{ count: number; classes: SportClass[] }>(
+      `/branches/${branchId}/classes/bulk`,
+      data,
+    ),
 };

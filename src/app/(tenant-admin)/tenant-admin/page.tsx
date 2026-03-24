@@ -23,7 +23,7 @@ import {
   Shield,
   DollarSign,
 } from "lucide-react";
-import { useAuth } from "@/contexts";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import { tenantsApi } from "@/lib/api";
 import {
   RoleName,
@@ -46,25 +46,16 @@ import {
 
 export default function TenantAdminDashboardPage() {
   const { user } = useAuth();
+  const { selectedTenantId } = useTenantSwitcher();
   const [dashboardData, setDashboardData] =
     useState<TenantDashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Get tenant ID from current user's role
-  const tenantRole = user?.roles?.find((r) => {
-    const roleName = r.roleName || r.role?.name;
-    return (
-      roleName === RoleName.TENANT_ADMIN &&
-      (r.scope === RoleScope.TENANT || r.tenantId)
-    );
-  });
-  const tenantId = tenantRole?.tenantId;
-
   const loadDashboard = useCallback(async () => {
-    if (!tenantId) return;
+    if (!selectedTenantId) return;
     setIsLoading(true);
     try {
-      const data = await tenantsApi.getDashboardStats(tenantId);
+      const data = await tenantsApi.getDashboardStats(selectedTenantId);
       setDashboardData(data as unknown as TenantDashboardStats);
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -72,7 +63,7 @@ export default function TenantAdminDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [selectedTenantId]);
 
   useEffect(() => {
     loadDashboard();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/lib/toast";
 import Link from "next/link";
 import {
@@ -43,13 +43,14 @@ import {
 } from "lucide-react";
 import { Branch, BranchForm, RoleName, RoleScope, Region, Comuna, UserRole } from "@/lib/types";
 import { publicApi, branchesApi, tenantsApi } from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { getAssetUrl } from "@/lib/api/endpoints";
 import { ImageGallery } from "@/components/ui/image-gallery";
 
 export default function TenantBranchesPage() {
   const { user: currentUser } = useAuth();
+  const { selectedTenantId } = useTenantSwitcher();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -99,26 +100,10 @@ export default function TenantBranchesPage() {
     amenitiesDescription: "",
   });
 
-  useEffect(() => {
-    loadBranches();
-    loadLocations();
-  }, []);
-
-  const loadLocations = async () => {
+  const loadBranches = useCallback(async () => {
+    if (!selectedTenantId) return;
     try {
-      const data = await publicApi.getLocations();
-      const list = Array.isArray(data)
-        ? data
-        : (data as unknown as { regions: Region[] }).regions || [];
-      setRegions(list);
-    } catch (error) {
-      console.error("Error loading locations:", error);
-    }
-  };
-
-  const loadBranches = async () => {
-    try {
-      const response = await branchesApi.list();
+      const response = await branchesApi.list({ tenantId: selectedTenantId });
       const branchesList = Array.isArray(response)
         ? response
         : (response as { data?: Branch[] })?.data || [];
@@ -129,7 +114,23 @@ export default function TenantBranchesPage() {
     } finally {
       setIsLoading(false);
     }
+  }, [selectedTenantId]);
+
+  const loadLocations = async () => {
+    try {
+      const resp = await publicApi.getRegions();
+      if (resp && Array.isArray(resp)) {
+        setRegions(resp);
+      }
+    } catch {
+      // toast error inside publicApi or ignore
+    }
   };
+
+  useEffect(() => {
+    loadBranches();
+    loadLocations();
+  }, [loadBranches]);
 
   const openEditDialog = (branch: Branch) => {
     setSelectedBranch(branch);
@@ -211,15 +212,7 @@ export default function TenantBranchesPage() {
     }
   };
 
-  // Get tenant ID from current user's role
-  const tenantRole = currentUser?.roles?.find((r: UserRole) => {
-    const roleName = r.roleName || r.role?.name;
-    return (
-      roleName === RoleName.TENANT_ADMIN &&
-      (r.scope === RoleScope.TENANT || r.tenantId)
-    );
-  });
-  const tenantId = tenantRole?.tenantId;
+
 
   const openCreateDialog = () => {
     setCreateFormData({
@@ -244,7 +237,7 @@ export default function TenantBranchesPage() {
   };
 
   const handleCreate = async () => {
-    if (!tenantId || !createFormData.name) return;
+    if (!selectedTenantId || !createFormData.name) return;
 
     setIsCreating(true);
     // Remove empty strings for optional fields
@@ -253,7 +246,7 @@ export default function TenantBranchesPage() {
     if (!dataToSubmit.comunaId) delete dataToSubmit.comunaId;
 
     try {
-      await toast.promise(tenantsApi.createBranch(tenantId, dataToSubmit), {
+      await toast.promise(tenantsApi.createBranch(selectedTenantId, dataToSubmit), {
         loading: "Creando sucursal...",
         success: "Sucursal creada correctamente",
         error: "Error al crear sucursal",

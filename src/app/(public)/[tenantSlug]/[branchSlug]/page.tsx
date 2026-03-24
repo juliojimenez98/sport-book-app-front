@@ -28,6 +28,7 @@ import {
   Coffee,
   Dumbbell,
   Bath,
+  GraduationCap,
 } from "lucide-react";
 import { publicApi, getAssetUrl } from "@/lib/api/endpoints";
 import { Tenant, Branch, Resource } from "@/lib/types";
@@ -187,6 +188,26 @@ export default function BranchPage() {
                 {branch.amenitiesDescription}
               </p>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Classes CTA */}
+      <section className="py-6 border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <GraduationCap className="h-6 w-6 text-primary" />
+              <div>
+                <h2 className="font-semibold">Clases Grupales</h2>
+                <p className="text-sm text-muted-foreground">Insírpete en clases deportivas con instructor</p>
+              </div>
+            </div>
+            <Button asChild variant="outline">
+              <Link href={`/${tenantSlug}/${branchSlug}/classes`}>
+                Ver clases disponibles
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

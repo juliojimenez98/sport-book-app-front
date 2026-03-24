@@ -88,6 +88,7 @@ export default function ResourceDetailPage() {
   const [bookedSlots, setBookedSlots] = useState<{date: string, time: string}[]>([]);
   const [pendingBookingSlots, setPendingBookingSlots] = useState<{date: string, time: string, id: number}[]>([]);
   const [blockedSlotsList, setBlockedSlotsList] = useState<CalendarBlockedSlot[]>([]);
+  const [classSlotsList, setClassSlotsList] = useState<{ classId: number; name: string; startsAt: string; endsAt: string }[]>([]);
   
   const [booking, setBooking] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<{ status: string } | null>(null);
@@ -236,6 +237,7 @@ export default function ResourceDetailPage() {
       setBookedSlots(confirmed);
       setPendingBookingSlots(myPending);
       setBlockedSlotsList(calendarData.blockedSlots || []);
+      setClassSlotsList(calendarData.classSlots || []);
       setCalendarDiscounts(calendarData.discounts || []);
     } catch (error) {
       console.error("Error fetching calendar data:", error);
@@ -717,6 +719,19 @@ export default function ResourceDetailPage() {
                             const pendingCell = pendingBookingSlots.find(b => b.date === dateStr && b.time === timeStr);
                             const pending = !!pendingCell;
                             const blocked = blockedSlotsList.some(bs => bs.date === dateStr && timeStr >= bs.startTime && timeStr < bs.endTime);
+                            const classBlocked = classSlotsList.some(cs => {
+                              const csDate = new Date(cs.startsAt);
+                              const ceDate = new Date(cs.endsAt);
+                              const csDateStr = getLocalDateString(csDate);
+                              if (csDateStr !== dateStr) return false;
+                              const csTime = csDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                              const ceTime = ceDate.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                              return timeStr >= csTime && timeStr < ceTime;
+                            });
+                            const classSlot = classBlocked ? classSlotsList.find(cs => {
+                              const csDate = new Date(cs.startsAt);
+                              return getLocalDateString(csDate) === dateStr;
+                            }) : null;
                             
                             // Check for discounts on this slot
                             const slotDiscount = calendarDiscounts.find((d: any) => {
@@ -731,7 +746,7 @@ export default function ResourceDetailPage() {
                               return true;
                             });
                             
-                            const disabled = closed || past || booked || blocked; // pending can be clicked to cancel
+                            const disabled = closed || past || booked || blocked || classBlocked; // pending can be clicked to cancel
                             const isSelected = selectedSlot?.date === dateStr && selectedSlot?.time === timeStr;
 
                             return (
@@ -766,9 +781,9 @@ export default function ResourceDetailPage() {
                                     <div className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-medium px-2 py-1 rounded w-full text-center truncate">
                                       Pendiente
                                     </div>
-                                  ) : blocked ? (
+                                  ) : blocked || classBlocked ? (
                                     <div className="bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 text-[10px] font-medium px-2 py-1 rounded w-full text-center truncate flex items-center justify-center gap-1">
-                                      <Ban className="w-3 h-3" /> ND
+                                      <Ban className="w-3 h-3" /> {classBlocked && classSlot ? `Clase` : "ND"}
                                     </div>
                                   ) : closed ? (
                                     <div className="opacity-0 group-hover:opacity-100 text-[9px] text-zinc-400 text-center w-full">

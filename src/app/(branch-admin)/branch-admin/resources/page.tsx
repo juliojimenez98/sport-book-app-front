@@ -36,15 +36,15 @@ import {
 import { branchesApi, resourcesApi, sportsApi } from "@/lib/api";
 import { Resource, Sport, ResourceForm } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import { useAuth } from "@/contexts";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { getAssetUrl } from "@/lib/api/endpoints";
 import { ImageGallery } from "@/components/ui/image-gallery";
 import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 export default function BranchResourcesPage() {
-  const { getBranchId } = useAuth();
-  const branchId = getBranchId();
+  const { user } = useAuth();
+  const { selectedBranchId } = useTenantSwitcher();
 
   const [resources, setResources] = useState<Resource[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
@@ -70,11 +70,11 @@ export default function BranchResourcesPage() {
   });
 
   const loadData = useCallback(async () => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
 
     try {
       const [resourcesData, sportsData] = await Promise.all([
-        branchesApi.getResources(branchId),
+        branchesApi.getResources(selectedBranchId),
         sportsApi.list(),
       ]);
 
@@ -88,7 +88,7 @@ export default function BranchResourcesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [branchId]);
+  }, [selectedBranchId]);
 
   useEffect(() => {
     loadData();
@@ -123,7 +123,7 @@ export default function BranchResourcesPage() {
   };
 
   const handleSubmit = async () => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
 
     if (!formData.name || !formData.sportId || !formData.pricePerHour) {
       toast.warning("Completa todos los campos requeridos");
@@ -143,7 +143,7 @@ export default function BranchResourcesPage() {
         );
       } else {
         await toast.promise(
-          branchesApi.createResource(branchId, formData as ResourceForm),
+          branchesApi.createResource(selectedBranchId, formData as ResourceForm),
           {
             loading: "Creando cancha...",
             success: "Cancha creada",
@@ -174,7 +174,7 @@ export default function BranchResourcesPage() {
     }
   };
 
-  if (!branchId) {
+  if (!selectedBranchId) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">

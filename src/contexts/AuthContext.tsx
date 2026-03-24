@@ -34,8 +34,6 @@ interface AuthContextType {
     branchId?: number,
   ) => boolean;
   isSuperAdmin: boolean;
-  getTenantId: () => number | null;
-  getBranchId: () => number | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -171,19 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return roleName === RoleName.SUPER_ADMIN;
     }) ?? false;
 
-  const getTenantId = useCallback((): number | null => {
-    if (!user?.roles) return null;
-    const tenantRole = user.roles.find(
-      (r) => r.scope === RoleScope.TENANT || r.scope === RoleScope.BRANCH,
-    );
-    return tenantRole?.tenantId ?? null;
-  }, [user]);
 
-  const getBranchId = useCallback((): number | null => {
-    if (!user?.roles) return null;
-    const branchRole = user.roles.find((r) => r.scope === RoleScope.BRANCH);
-    return branchRole?.branchId ?? null;
-  }, [user]);
 
   const value: AuthContextType = {
     user,
@@ -196,8 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateUser,
     hasRole,
     isSuperAdmin,
-    getTenantId,
-    getBranchId,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

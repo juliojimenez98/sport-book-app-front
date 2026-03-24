@@ -348,6 +348,7 @@ export interface CalendarResponse {
   to: string;
   bookings: CalendarBooking[];
   blockedSlots: CalendarBlockedSlot[];
+  classSlots?: { classId: number; name: string; startsAt: string; endsAt: string }[];
   discounts: {
     discountId: number;
     name: string;
@@ -578,4 +579,68 @@ export interface CardFormInput {
   expMonth: number;
   expYear: number;
   isDefault?: boolean;
+}
+
+// ============ SPORT CLASSES ============
+
+export interface SportClass {
+  classId: number;
+  tenantId: number;
+  branchId: number;
+  sportId: number;
+  resourceId?: number;
+  name: string;
+  description?: string;
+  instructor?: string;
+  startsAt: string;
+  endsAt: string;
+  maxCapacity: number;
+  price: number;
+  currency: string;
+  isActive: boolean;
+  spotsLeft?: number;
+  sport?: Sport;
+  branch?: Branch;
+  resource?: Resource;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ClassEnrollment {
+  enrollmentId: number;
+  classId: number;
+  userId?: number;
+  status: "confirmed" | "cancelled";
+  enrolledAt: string;
+  sportClass?: SportClass;
+  user?: UserProfile;
+}
+
+export interface ClassForm {
+  name: string;
+  sportId: number;
+  resourceId?: number;
+  description?: string;
+  instructor?: string;
+  startsAt: string;
+  endsAt: string;
+  maxCapacity: number;
+  price: number;
+  currency: string;
+}
+
+export interface RecurringClassForm {
+  name: string;
+  sportId: number;
+  resourceId?: number;
+  description?: string;
+  instructor?: string;
+  daysOfWeek: number[];
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  maxCapacity: number;
+  price: number;
+  currency: string;
 }

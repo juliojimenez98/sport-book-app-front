@@ -28,7 +28,7 @@ import {
 } from "@/components/ui";
 import { Clock, Save, Plus, Trash2, Ban, CalendarOff } from "lucide-react";
 import { branchesApi } from "@/lib/api";
-import { useAuth } from "@/contexts";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import {
   BranchHours,
   BlockedSlot,
@@ -59,17 +59,7 @@ for (let h = 0; h < 24; h++) {
 
 export default function BranchAdminHoursPage() {
   const { user } = useAuth();
-
-  // Get branchId from user's role
-  const branchRole = user?.roles?.find((r) => {
-    const roleName = r.roleName || r.role?.name;
-    return (
-      (roleName === RoleName.BRANCH_ADMIN || roleName === RoleName.STAFF) &&
-      (r.scope === RoleScope.BRANCH || r.branchId)
-    );
-  });
-  const branchId = branchRole?.branchId;
-  const branchName = branchRole?.branch?.name;
+  const { selectedBranchId } = useTenantSwitcher();
 
   const [hours, setHours] = useState<BranchHours[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
@@ -90,12 +80,12 @@ export default function BranchAdminHoursPage() {
   });
 
   const loadData = useCallback(async () => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
     setIsLoading(true);
     try {
       const [hoursData, resourcesData] = await Promise.all([
-        branchesApi.getHours(branchId),
-        branchesApi.getResources(branchId),
+        branchesApi.getHours(selectedBranchId),
+        branchesApi.getResources(selectedBranchId),
       ]);
 
       const hoursList = Array.isArray(hoursData) ? hoursData : [];
@@ -109,7 +99,7 @@ export default function BranchAdminHoursPage() {
         } else {
           fullHours.push({
             branchHoursId: 0,
-            branchId,
+            branchId: selectedBranchId,
             dayOfWeek: day,
             openTime: "08:00",
             closeTime: "22:00",
@@ -125,7 +115,7 @@ export default function BranchAdminHoursPage() {
       const today = new Date();
       const in30Days = new Date();
       in30Days.setDate(today.getDate() + 30);
-      const blockedData = await branchesApi.getBlockedSlots(branchId, {
+      const blockedData = await branchesApi.getBlockedSlots(selectedBranchId, {
         from: today.toISOString().split("T")[0],
         to: in30Days.toISOString().split("T")[0],
       });
@@ -137,7 +127,7 @@ export default function BranchAdminHoursPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [branchId]);
+  }, [selectedBranchId]);
 
   useEffect(() => {
     loadData();
@@ -157,10 +147,10 @@ export default function BranchAdminHoursPage() {
   };
 
   const handleSaveHours = async () => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
     setIsSaving(true);
     try {
-      await toast.promise(branchesApi.updateHours(branchId, hours), {
+      await toast.promise(branchesApi.updateHours(selectedBranchId, hours), {
         loading: "Guardando horarios...",
         success: "Horarios actualizados correctamente",
         error: "Error al guardar los horarios",
@@ -188,7 +178,7 @@ export default function BranchAdminHoursPage() {
 
   const handleCreateBlock = async () => {
     if (
-      !branchId ||
+      !selectedBranchId ||
       !blockForm.date ||
       !blockForm.startTime ||
       !blockForm.endTime
@@ -197,7 +187,7 @@ export default function BranchAdminHoursPage() {
 
     setIsBlocking(true);
     try {
-      await toast.promise(branchesApi.createBlockedSlot(branchId, blockForm), {
+      await toast.promise(branchesApi.createBlockedSlot(selectedBranchId, blockForm), {
         loading: "Bloqueando horario...",
         success: "Horario bloqueado correctamente",
         error: "Error al bloquear horario",
@@ -212,9 +202,9 @@ export default function BranchAdminHoursPage() {
   };
 
   const handleDeleteBlock = async (id: number) => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
     try {
-      await toast.promise(branchesApi.deleteBlockedSlot(branchId, id), {
+      await toast.promise(branchesApi.deleteBlockedSlot(selectedBranchId, id), {
         loading: "Eliminando bloqueo...",
         success: "Bloqueo eliminado",
         error: "Error al eliminar bloqueo",
@@ -234,7 +224,7 @@ export default function BranchAdminHoursPage() {
     });
   };
 
-  if (!branchId) {
+  if (!selectedBranchId) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">
@@ -263,7 +253,7 @@ export default function BranchAdminHoursPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">
-          Horarios{branchName ? `: ${branchName}` : ""}
+          Horarios
         </h1>
         <p className="text-muted-foreground">
           Configura los horarios de atención y bloquea horarios específicos

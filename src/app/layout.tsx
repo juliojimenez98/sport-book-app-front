@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sileo";
-import { AuthProvider, ThemeProvider } from "@/contexts";
+import { AuthProvider, ThemeProvider, TenantSwitcherProvider } from "@/contexts";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,8 +36,10 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <AuthProvider>
-            {children}
-            <Toaster position="top-center" />
+            <TenantSwitcherProvider>
+              {children}
+              <Toaster position="top-center" />
+            </TenantSwitcherProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

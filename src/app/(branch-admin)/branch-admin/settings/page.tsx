@@ -21,7 +21,7 @@ import {
 import { branchesApi } from "@/lib/api";
 import { Branch } from "@/lib/types";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 
 const branchSettingsSchema = z.object({
   name: z.string().min(2, "Mínimo 2 caracteres"),
@@ -47,7 +47,8 @@ const branchSettingsSchema = z.object({
 type BranchSettingsFormData = z.infer<typeof branchSettingsSchema>;
 
 export default function BranchSettingsPage() {
-  const { getBranchId } = useAuth();
+  const { user } = useAuth();
+  const { selectedBranchId } = useTenantSwitcher();
   const [branch, setBranch] = useState<Branch | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,13 +65,12 @@ export default function BranchSettingsPage() {
   });
 
   const imagesValue = watch("images") || [];
-  const branchId = getBranchId();
 
   useEffect(() => {
-    if (branchId) {
-      loadBranch(branchId);
+    if (selectedBranchId) {
+      loadBranch(selectedBranchId);
     }
-  }, [branchId]);
+  }, [selectedBranchId]);
 
   const loadBranch = async (id: number) => {
     try {
@@ -105,15 +105,15 @@ export default function BranchSettingsPage() {
   };
 
   const onSubmit = async (data: BranchSettingsFormData) => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
     setIsSubmitting(true);
     try {
-      await toast.promise(branchesApi.update(branchId, data), {
+      await toast.promise(branchesApi.update(selectedBranchId, data), {
         loading: "Actualizando sucursal...",
         success: "Sucursal actualizada con éxito",
         error: "Error al actualizar",
       });
-      loadBranch(branchId);
+      loadBranch(selectedBranchId);
     } catch {
       // error handled by toast
     } finally {
@@ -362,7 +362,7 @@ export default function BranchSettingsPage() {
             type="button"
             variant="outline"
             onClick={() => {
-              if (branchId) loadBranch(branchId);
+              if (selectedBranchId) loadBranch(selectedBranchId);
             }}
             disabled={isSubmitting}
           >

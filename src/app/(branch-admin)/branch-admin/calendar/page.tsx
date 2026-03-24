@@ -38,7 +38,7 @@ import {
   generateTimeSlots,
   formatDate,
 } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, useTenantSwitcher } from "@/contexts";
 import { branchesApi, bookingsApi } from "@/lib/api";
 import {
   Resource,
@@ -83,8 +83,8 @@ function isCellInSelection(
 }
 
 export default function BranchCalendarPage() {
-  const { getBranchId } = useAuth();
-  const branchId = getBranchId();
+  const { user } = useAuth();
+  const { selectedBranchId } = useTenantSwitcher();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedResource, setSelectedResource] = useState<string>("all");
@@ -150,22 +150,22 @@ export default function BranchCalendarPage() {
   todayDate.setHours(0, 0, 0, 0);
 
   const loadData = useCallback(async () => {
-    if (!branchId) return;
+    if (!selectedBranchId) return;
     setIsLoading(true);
     try {
       const [resourcesRes, bookingsRes, blockedRes, hoursRes] =
         await Promise.all([
-          branchesApi.getResources(branchId),
-          branchesApi.getBookings(branchId, {
+          branchesApi.getResources(selectedBranchId),
+          branchesApi.getBookings(selectedBranchId, {
             from: weekStartStr,
             to: weekEndStr,
             limit: 1000,
           }),
-          branchesApi.getBlockedSlots(branchId, {
+          branchesApi.getBlockedSlots(selectedBranchId, {
             from: weekStartStr,
             to: weekEndStr,
           }),
-          branchesApi.getHours(branchId),
+          branchesApi.getHours(selectedBranchId),
         ]);
 
       setResources(
@@ -190,7 +190,7 @@ export default function BranchCalendarPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [branchId, weekStartStr, weekEndStr]);
+  }, [selectedBranchId, weekStartStr, weekEndStr]);
 
   useEffect(() => {
     loadData();
@@ -379,7 +379,7 @@ export default function BranchCalendarPage() {
   };
 
   const handleCreateBlock = async () => {
-    if (!branchId || blockDialog.dates.length === 0) return;
+    if (!selectedBranchId || blockDialog.dates.length === 0) return;
     setIsSubmitting(true);
     try {
       const resourceId =
@@ -389,7 +389,7 @@ export default function BranchCalendarPage() {
       await toast.promise(
         Promise.all(
           blockDialog.dates.map((date) =>
-            branchesApi.createBlockedSlot(branchId, {
+            branchesApi.createBlockedSlot(selectedBranchId, {
               date,
               startTime: blockDialog.startTime,
               endTime: blockDialog.endTime,
@@ -417,12 +417,12 @@ export default function BranchCalendarPage() {
   };
 
   const handleDeleteBlock = async () => {
-    if (!branchId || !deleteDialog.slot) return;
+    if (!selectedBranchId || !deleteDialog.slot) return;
     setIsSubmitting(true);
     try {
       await toast.promise(
         branchesApi.deleteBlockedSlot(
-          branchId,
+          selectedBranchId,
           deleteDialog.slot.blockedSlotId,
         ),
         {
@@ -462,7 +462,7 @@ export default function BranchCalendarPage() {
     return `${first}  →  ${last} (${dates.length} días)`;
   };
 
-  if (!branchId) {
+  if (!selectedBranchId) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">No se encontró la sucursal</p>

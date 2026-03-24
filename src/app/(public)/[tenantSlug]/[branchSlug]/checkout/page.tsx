@@ -11,7 +11,10 @@ import {
   ArrowLeft,
   CreditCard as CreditCardIcon,
   CheckCircle2,
-  Info
+  Info,
+  Tag,
+  Loader2,
+  X,
 } from "lucide-react";
 import { bookingsApi, cardsApi, publicApi } from "@/lib/api/endpoints";
 import { Booking, UserCard, CardFormInput, Resource, Discount } from "@/lib/types";
@@ -22,6 +25,7 @@ import { SuccessModal } from "@/components/payment/SuccessModal";
 import { AddressRequiredModal } from "@/components/ui/address-required-modal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 
 function CheckoutContent() {
@@ -33,7 +37,7 @@ function CheckoutContent() {
   const resourceId = parseInt(searchParams.get("resourceId") || "0");
   const startAt = searchParams.get("startAt");
   const endAt = searchParams.get("endAt");
-  const discountCode = searchParams.get("discountCode");
+  const initialDiscountCode = searchParams.get("discountCode") || "";
 
   const [resource, setResource] = useState<Resource | null>(null);
   const [cards, setCards] = useState<UserCard[]>([]);
@@ -45,6 +49,11 @@ function CheckoutContent() {
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
+
+  // ── Discount code state ──
+  const [discountCode, setDiscountCode] = useState(initialDiscountCode);
+  const [appliedCode, setAppliedCode] = useState(initialDiscountCode);
+  const [isCheckingDiscount, setIsCheckingDiscount] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -76,7 +85,7 @@ function CheckoutContent() {
       if (defaultCard) setSelectedCardId(defaultCard.userCardId);
       if (cardsData.length === 0) setShowCardForm(true);
 
-      // Get price preview
+      // Get price preview with initial discount code
       if (resourceData.branch?.tenantId) {
         const preview = await publicApi.calculateDiscount({
           resourceId,
@@ -84,14 +93,66 @@ function CheckoutContent() {
           branchId: resourceData.branchId,
           startAt,
           endAt,
-          code: discountCode || undefined
+          code: initialDiscountCode || undefined,
         });
         setPricePreview(preview as any);
+        if ((preview as any)?.discount?.code) {
+          setAppliedCode((preview as any).discount.code);
+          setDiscountCode((preview as any).discount.code);
+        }
       }
     } catch (error) {
       toast.error("Error al cargar la información");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── Apply / remove discount code ──
+  const applyDiscount = async () => {
+    if (!resource?.branch?.tenantId || !startAt || !endAt || !discountCode.trim()) return;
+    setIsCheckingDiscount(true);
+    try {
+      const preview = await publicApi.calculateDiscount({
+        resourceId,
+        tenantId: resource.branch.tenantId,
+        branchId: resource.branchId,
+        startAt,
+        endAt,
+        code: discountCode.trim(),
+      });
+      setPricePreview(preview as any);
+      if ((preview as any)?.discount) {
+        setAppliedCode(discountCode.trim());
+        toast.success(`¡Descuento "${(preview as any).discount.name}" aplicado!`);
+      } else {
+        toast.error("Código de descuento no válido o no aplica a esta reserva");
+      }
+    } catch {
+      toast.error("Error al verificar el código de descuento");
+    } finally {
+      setIsCheckingDiscount(false);
+    }
+  };
+
+  const removeDiscount = async () => {
+    if (!resource?.branch?.tenantId || !startAt || !endAt) return;
+    setIsCheckingDiscount(true);
+    try {
+      const preview = await publicApi.calculateDiscount({
+        resourceId,
+        tenantId: resource.branch.tenantId,
+        branchId: resource.branchId,
+        startAt,
+        endAt,
+      });
+      setPricePreview(preview as any);
+      setDiscountCode("");
+      setAppliedCode("");
+    } catch {
+      toast.error("Error al recalcular precio");
+    } finally {
+      setIsCheckingDiscount(false);
     }
   };
 
@@ -119,21 +180,19 @@ function CheckoutContent() {
     try {
       setIsProcessing(true);
       
-      // 1. Create the booking (this also processes payment logic in user's request)
       const bookingResult = await bookingsApi.createAsUser({
         resourceId,
         startAt: startAt!,
         endAt: endAt!,
-        discountCode: discountCode || undefined,
+        discountCode: appliedCode || undefined,
       });
 
       const bookingData = (bookingResult as any).data || bookingResult;
       
-      // Add more details for the modal
       const fullBooking = {
         ...bookingData,
         resource,
-        branch: resource?.branch
+        branch: resource?.branch,
       };
       
       setCreatedBooking(fullBooking);
@@ -141,7 +200,6 @@ function CheckoutContent() {
       
       toast.success("¡Reserva realizada con éxito!");
     } catch (error: any) {
-      // If backend says address is required, open the modal instead of a generic toast
       const msg: string = error?.message || "";
       if (msg.toLowerCase().includes("dirección") || msg.toLowerCase().includes("direccion") || msg.toLowerCase().includes("address")) {
         setAddressModalOpen(true);
@@ -219,6 +277,58 @@ function CheckoutContent() {
                 </div>
               </div>
 
+              {/* ── Discount Code Section ── */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5" />
+                  Código de descuento
+                </label>
+
+                {appliedCode && pricePreview.discount ? (
+                  <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-3">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 truncate">
+                        {pricePreview.discount.name}
+                      </p>
+                      <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">
+                        Código: {appliedCode}
+                      </p>
+                    </div>
+                    <button
+                      onClick={removeDiscount}
+                      disabled={isCheckingDiscount}
+                      className="p-1 rounded-full hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 text-emerald-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                      placeholder="Ej: PROMO2026"
+                      className="flex-1 rounded-xl font-mono uppercase"
+                      onKeyDown={(e) => e.key === "Enter" && applyDiscount()}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={applyDiscount}
+                      disabled={!discountCode.trim() || isCheckingDiscount}
+                      className="rounded-xl px-5"
+                    >
+                      {isCheckingDiscount ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        "Aplicar"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Price breakdown */}
               <div className="pt-4 border-t space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Tarifa base</span>
@@ -330,7 +440,6 @@ function CheckoutContent() {
         />
       )}
 
-      {/* Address required — fires when backend rejects booking due to missing address */}
       <AddressRequiredModal
         open={addressModalOpen}
         onOpenChange={setAddressModalOpen}
